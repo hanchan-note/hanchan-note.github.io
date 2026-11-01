@@ -227,7 +227,7 @@ const HOW={
   sessions:["「＋ セットを記録」か「＋ フリーを記録」を押す","行を押すと開いて、直したり消したりできる","一覧とカレンダーを切り替えて見る（細かい集計は成績のタブ）"],
   set:["「＋ 新しく始める」でルールとメンバーを選ぶ","半荘ごとに点数を入れて「記録する」","終わったらチップと場代を入れて「このセッションを記録する」"],
   free:["四麻か三麻を選ぶ（ルールは最初に一度決めるだけ）","着順を押して、点数を入れる","「記録する」で今日の合計が出る"],
-  players:["ルールを選んで「セットで使う」か「フリーで使う」を押す","一緒に打つ人を「メンバーを追加」で入れる","自分の行の「自分」を押すと、集計の対象になる"],
+  players:["ルールを選んで「セットで使う」か「フリーで使う」を押す。ないルールは「ルールを作る」で作れる","一緒に打つ人を「メンバーを追加」で入れる","自分の行の「自分」を押すと、集計の対象になる"],
   stats:["期間やレート、メンバーなどを選ぶ（何も選ばなければ全部）","下の表とグラフが選んだ条件で変わる","フリーの成績は上、セットの成績はその下に出る"],
 };
 const howBox=k=>`<details class="howtobox" data-howto="${k}" ${(db.settings.howClosed||{})[k]?"":"open"}><summary>【使い方】</summary><ol class="note howto">${HOW[k].map(x=>`<li>${x}</li>`).join("")}</ol></details>`;
@@ -276,7 +276,7 @@ const TOUR=[
   ["set","セット","友達と打つ日はここ。ルールとメンバーを選んで、半荘ごとに点数を入れます。"],
   ["free","フリー","お店で打つ日はここ。着順と自分の点数を入れるだけです。"],
   ["players","ルール/メンバ","ルールと一緒に打つ人を決めます。「自分」を選ぶと、成績に入ります。"],
-  ["stats","成績","期間、レート、メンバーを組み合わせて集計できます。"],
+  ["stats","成績","期間や四麻・三麻で絞って見られます。レートやメンバーの組み合わせは拡張機能です。"],
   ["settings","設定","困ったときは、設定の「使い方」を見てください。"],
 ];
 let tourAt=-1;
@@ -309,7 +309,7 @@ function render(){
   charts.forEach(c=>c.destroy()); charts=[];
   document.querySelectorAll("nav.tabs button").forEach(b=>b.setAttribute("aria-current",b.dataset.tab===tab));
   const banner = hasSample(db) ? `<div class="sample"><span>いま入っているのは見本のデータです</span><button class="small" id="clearSample">見本を消して始める</button></div>`:"";
-  const notice = db.settings.noticeDone ? "" : `<div class="sample"><span>記録はこの端末の中だけに残ります。iPhone はホーム画面に追加して使ってください。機種変更やブラウザのデータ削除で消えるので、残したいときはバックアップ（拡張機能）を使ってください。使い方は設定にあります。</span><button class="small" id="noticeOk">わかった</button></div>`;
+  const notice = db.settings.noticeDone ? "" : `<div class="sample"><span>記録はこの端末の中だけに残ります。同じ端末でも、別のブラウザでは記録を見られません。ホーム画面のアイコンと Safari でも分かれることがあります。iPhone はホーム画面に追加して、アイコンから使ってください。機種変更やブラウザのデータ削除で消えるので、残したいときはバックアップ（拡張機能）を使ってください。使い方は設定にあります。</span><button class="small" id="noticeOk">わかった</button></div>`;
   const broken = saveBroken ? `<p class="warn">記録を保存できませんでした。端末の空き容量を確かめてください。</p>`:"";
   const due = unlocked() && (tab==="stats"||(tab==="sessions"&&!openSession)) && backupDue(db) ? `<div class="sample"><span>ファイルに保存していない記録が ${unsavedGames(db)}半荘あります</span><span class="row"><button class="small ghost" id="bkLater">あとで</button><button class="small" id="bkDue">保存する</button></span><span id="bkMsg" style="flex-basis:100%"></span></div>`:"";
   const until=db.settings.unlockUntil, left=until?Math.ceil((until-Date.now())/864e5):0;
@@ -343,6 +343,7 @@ const PICK_SHOW=6, fOpen={};
 const statModes=sel=>[...new Set(sel.map(s=>s.rule.mode))].sort((a,b)=>b-a);
 const modeName=m=>m===3?"三麻":"四麻";
 const rateName=r=>`レート${Number(r)/100}`;
+const FILTER_LOCK="組み合わせの集計は拡張機能です。設定で30日試せます";
 const statSel=()=>filter.kind==="free"?[]:filterSessions(db.sessions,filter);
 const freeSel=()=>filter.kind==="set"?[]:filterFree(freeState().games,filter);
 function freeStatsCard(){
@@ -391,12 +392,14 @@ function viewStats(){
   const n = filter.mode? Number(filter.mode) : (sel.every(s=>s.rule.mode===3)&&sel.length?3:4);
   const st=playerStats(sel,n);
   const ids=Object.keys(st).sort((a,b)=>st[b].yen-st[a].yen);
+  if(!unlocked()) filter=basicFilter(filter);
+  const lock=unlocked()?"":'<span class="lock">拡張</span>';
   const chipRow=(arr,key,label)=>arr.map(v=>`<button class="chip" data-f="${key}" data-v="${esc(v.v)}" aria-pressed="${v.on}">${esc(v.l)}</button>`).join("");
   const pickList = db.sessions.slice().sort((a,b)=>b.date.localeCompare(a.date)).map(s=>`<label class="row" style="gap:6px"><input type="checkbox" data-pick="${s.id}" ${filter.pick.includes(s.id)?"checked":""}> <span class="num">${s.date}</span> ${esc(s.title||(s.tags||[]).join(" "))} <span class="note">${s.rule.mode}人・${s.rule.rate}P</span></label>`).join("");
   // 候補が少ないうちは並べ、多くなったら閉じた欄に入れる。何も選ばなければ全部を集計する
   const pickRow=(label,arr,key)=>{ if(!arr.length) return ""; const on=arr.filter(v=>v.on).length, chips=chipRow([{v:"",l:"すべて",on:!on},...arr],key);
-    return arr.length<=PICK_SHOW?`<div class="row"><span class="note">${label}</span>${chips}</div>`
-      :`<details data-fopen="${key}" ${fOpen[key]?"open":""}><summary>${label}：${on?on+"つ選択中":"すべて"}（${arr.length}種類）</summary><div class="row" style="margin-top:8px">${chips}</div></details>`;};
+    return arr.length<=PICK_SHOW?`<div class="row"><span class="note">${label}${key==="mode"?"":lock}</span>${chips}</div>`
+      :`<details data-fopen="${key}" ${fOpen[key]?"open":""}><summary>${label}${lock}：${on?on+"つ選択中":"すべて"}（${arr.length}種類）</summary><div class="row" style="margin-top:8px">${chips}</div></details>`;};
   return `
   <section class="card" aria-labelledby="fh">
     ${howBox("stats")}
@@ -407,7 +410,7 @@ function viewStats(){
     ${pickRow("レート",allRates().map(r=>({v:r,l:String(r/100),on:filter.rates.includes(r)})),"rates")}
     ${pickRow("場所",allTags().map(t=>({v:t,l:t,on:filter.tags.includes(t)})),"tags")}
     ${pickRow("メンバー（選んだ人が全員いた回だけ）",playersByRecent(db).filter(p=>!p.guest).map(p=>({v:p.id,l:p.name,on:filter.members.includes(p.id)})),"members")}
-    <details ${filter.pick.length?"open":""}><summary>セッションを選んで集計する（${filter.pick.length?filter.pick.length+"件選択中":"選ばなければ全部"}）</summary><div class="stack" style="margin-top:8px">${pickList||'<span class="note">記録がまだありません</span>'}</div></details>
+    <details ${filter.pick.length?"open":""}><summary>セッションを選んで集計する${lock}（${filter.pick.length?filter.pick.length+"件選択中":"選ばなければ全部"}）</summary><div class="stack" style="margin-top:8px">${pickList||'<span class="note">記録がまだありません</span>'}</div></details>
     <div class="row between">
       <div class="row">${db.saved.map((sv,i)=>`<button class="chip" data-load="${i}">${esc(sv.name)}</button>`).join("")}</div>
       <div class="row"><button class="small ghost" id="freset">条件を外す</button><button class="small" id="fsave">この条件を保存${unlocked()?"":'<span class="lock">拡張</span>'}</button></div>
@@ -443,13 +446,14 @@ function bindStats(){
   document.getElementById("fto").onchange=e=>{filter.to=e.target.value;upd();};
   document.querySelectorAll("[data-f]").forEach(b=>b.onclick=()=>{
     const k=b.dataset.f, v=b.dataset.v;
+    if(v&&["rates","tags","members"].includes(k)&&!unlocked()){toast(FILTER_LOCK);return;}
     if(k==="mode"||k==="kind"){filter[k]=v;}
     else if(v==="") filter[k]=[];
     else{ const val = k==="rates"?Number(v):v; const a=filter[k]; const i=a.indexOf(val); i>=0?a.splice(i,1):a.push(val); }
     upd();
   });
   document.querySelectorAll("[data-fopen]").forEach(d=>d.ontoggle=()=>{fOpen[d.dataset.fopen]=d.open;});
-  document.querySelectorAll("[data-pick]").forEach(c=>c.onchange=()=>{const id=c.dataset.pick;const i=filter.pick.indexOf(id); c.checked? (i<0&&filter.pick.push(id)) : (i>=0&&filter.pick.splice(i,1)); upd();});
+  document.querySelectorAll("[data-pick]").forEach(c=>c.onchange=()=>{if(!unlocked()){c.checked=false;toast(FILTER_LOCK);return;} const id=c.dataset.pick;const i=filter.pick.indexOf(id); c.checked? (i<0&&filter.pick.push(id)) : (i>=0&&filter.pick.splice(i,1)); upd();});
   document.getElementById("freset").onclick=()=>{filter={from:"",to:"",mode:"",rates:[],tags:[],members:[],pick:[]};upd();};
   document.getElementById("fsave").onclick=()=>{
     if(!unlocked()){document.getElementById("saveLock").hidden=false;return;}
@@ -798,11 +802,29 @@ const roundOpts=now=>ROUNDS.map(([v,l])=>`<option value="${v}" ${(now||"")===v?"
 const ruleLine=r=>`${modeName(r.mode)}・${r.start}持ち${r.ret}返し・ウマ${r.uma.join("/")}${r.tobi?`・トビ賞${r.tobi}`:""}${r.tobi&&r.tobiDouble==="half"?"・ダブルは分ける":r.tobi&&r.tobiDouble==="low"?"・ダブルは一番低い人":""}${r.round==="56"?"・五捨六入":r.round==="45"?"・四捨五入":""}・${rateName(r.rate)}${r.chipRate?`・チップ${r.chipRate}P`:""}${r.fee?`・ゲーム代${r.fee}P`:""}`;
 // 四麻と三麻を切り替えても、それぞれ前に使っていたルールに戻す
 function setFreeMode(r,m){ const f=freeState(), by=f.byMode=f.byMode||{}; by[r.mode]=ruleCopy(r); if(by[m]) Object.assign(r,JSON.parse(JSON.stringify(by[m]))); else{ Object.assign(r,JSON.parse(JSON.stringify(FREE_RULES[m]))); r.chipRate=chipFor(m,r.rate); } if(freeRank>m) freeRank=1; }
-function saveRule(name){
-  const r=freeState().rule, x=db.rules.find(v=>v.name===name);
-  if(x&&!confirm(`「${name}」はもうあります。今のルールで上書きしますか？`)) return;
+function saveRule(name,r=freeState().rule){
+  const x=db.rules.find(v=>v.name===name);
+  if(x&&!confirm(`「${name}」はもうあります。今のルールで上書きしますか？`)) return false;
   if(x) x.rule=ruleCopy(r); else db.rules.push({id:uid(),name,rule:ruleCopy(r),place:""});
-  save();
+  save(); return true;
+}
+// ルールの入力欄。フリーの「ルールを変える」とルールのタブの「ルールを作る」で同じものを使う
+const ruleFields=(r,key,double=false)=>`<div class="grid2"><label class="f">持ち点<input inputmode="numeric" data-${key}="start" value="${r.start}"></label><label class="f">返し<input inputmode="numeric" data-${key}="ret" value="${r.ret}"></label></div>
+    <div class="grid2"><label class="f">ウマ（5-10 や 5,10 でも可）<input data-${key}="uma" value="${r.uma.join(",")}"></label><label class="f">トビ賞（なしは0）<input inputmode="decimal" data-${key}="tobi" value="${r.tobi||0}"></label></div>
+    ${double?`<label class="f" id="rdDoubleBox" style="display:${r.tobi?"":"none"}">ダブル飛ばし<select data-${key}="tobiDouble">${doubleOpts(r.tobiDouble)}</select></label>`:""}
+    <label class="f">千点未満の端数<select data-${key}="round">${roundOpts(r.round)}</select></label>
+    <div class="grid2"><label class="f">千点あたり（P）<input inputmode="decimal" data-${key}="rate" value="${r.rate}"></label><label class="f">チップ1枚（P）<input inputmode="decimal" data-${key}="chipRate" value="${r.chipRate}"></label></div>
+    <div class="grid2"><label class="f">ゲーム代（P）<input inputmode="decimal" data-${key}="fee" value="${r.fee}"></label><label class="f">トップのゲーム代（同じなら空）<input inputmode="decimal" data-${key}="feeTop" value="${r.feeTop}"></label></div>`;
+// 入力欄の値をルールに入れる。入れられないときは直し方の文を返す
+function setRuleField(i,r,key){
+  const k=i.dataset[key];
+  if(k==="uma"){ const u=parseUma(i.value,r.mode); if(!u) return umaHelp(r.mode); r.uma=u; }
+  else if(k==="round"||k==="tobiDouble") r[k]=i.value;
+  else if(k==="feeTop"&&i.value.trim()==="") r.feeTop="";
+  else{ const n=parseSigned(i.value); if(n===null) return "数字を入れてください";
+    if(k==="rate"&&r.chipRate===chipFor(r.mode,r.rate)){ r.chipRate=chipFor(r.mode,n); document.querySelector(`[data-${key}="chipRate"]`).value=r.chipRate; }
+    r[k]=n; }
+  return "";
 }
 const freeItem=g=>{const x=freeLine(g);return `<div class="item" style="cursor:default"><span>${g.rank}着 <span class="num">${g.score.toLocaleString()}点</span>${g.chips?`<span class="note"> チップ${g.chips}</span>`:""}${g.tobiWin?'<span class="note"> 飛ばした</span>':""}</span><span class="row"><b class="${cls(x.total)}">${fmtP(x.total)}</b><button class="small ghost" data-fedit="${g.id}" aria-label="この半荘を直す">直す</button><button class="small ghost" data-fdel="${g.id}" aria-label="この半荘を消す">消す</button></span></div>`;};
 // 今日の着順の回数。四麻と三麻が混ざる日は分けて出す
@@ -834,11 +856,7 @@ function viewFree(){
     <div class="list">${todays.slice().reverse().map(freeItem).join("")||'<p class="note">まだ記録がありません。記録はセッションのタブにも入ります。</p>'}</div>
   </section>
   <section class="card"><details id="fRules" ${open?"open":""}><summary>ルールを変える</summary><div class="stack" style="margin-top:8px">
-    <div class="grid2"><label class="f">持ち点<input inputmode="numeric" data-frule="start" value="${r.start}"></label><label class="f">返し<input inputmode="numeric" data-frule="ret" value="${r.ret}"></label></div>
-    <div class="grid2"><label class="f">ウマ（5-10 や 5,10 でも可）<input data-frule="uma" value="${r.uma.join(",")}"></label><label class="f">トビ賞（なしは0）<input inputmode="decimal" data-frule="tobi" value="${r.tobi||0}"></label></div>
-    <label class="f">千点未満の端数<select data-frule="round">${roundOpts(r.round)}</select></label>
-    <div class="grid2"><label class="f">千点あたり（P）<input inputmode="decimal" data-frule="rate" value="${r.rate}"></label><label class="f">チップ1枚（P）<input inputmode="decimal" data-frule="chipRate" value="${r.chipRate}"></label></div>
-    <div class="grid2"><label class="f">ゲーム代（P）<input inputmode="decimal" data-frule="fee" value="${r.fee}"></label><label class="f">トップのゲーム代（同じなら空）<input inputmode="decimal" data-frule="feeTop" value="${r.feeTop}"></label></div>
+    ${ruleFields(r,"frule")}
     <span class="warn" id="fRuleErr"></span>
     <div class="row"><input id="rName" placeholder="ルールの名前（例：いつもの三麻）" style="flex:1"><button class="small" id="rSave">このルールを保存</button></div>
   </div></details></section>
@@ -879,15 +897,8 @@ function bindFree(){
   document.querySelectorAll("[data-fmode]").forEach(b=>b.onclick=()=>{setFreeMode(r,Number(b.dataset.fmode));freeTobi=false;save();render();});
   document.querySelectorAll("[data-rapply]").forEach(b=>b.onclick=()=>{Object.assign(r,ruleCopy(db.rules.find(x=>x.id===b.dataset.rapply).rule));if(freeRank>r.mode)freeRank=1;save();render();});
   document.querySelectorAll("[data-frule]").forEach(i=>i.onchange=()=>{
-    const k=i.dataset.frule, msg=document.getElementById("fRuleErr"); msg.textContent="";
-    if(k==="uma"){ const u=parseUma(i.value,r.mode);
-      if(!u){msg.textContent=umaHelp(r.mode);return;}
-      r.uma=u; }
-    else if(k==="round") r.round=i.value;
-    else if(k==="feeTop"&&i.value.trim()==="") r.feeTop="";
-    else{ const n=parseSigned(i.value); if(n===null){msg.textContent="数字を入れてください";return;}
-      if(k==="rate"&&r.chipRate===chipFor(r.mode,r.rate)){ r.chipRate=chipFor(r.mode,n); document.querySelector('[data-frule="chipRate"]').value=r.chipRate; }
-      r[k]=n; }
+    const msg=document.getElementById("fRuleErr"); msg.textContent=setRuleField(i,r,"frule");
+    if(msg.textContent) return;
     save(); paint();
   });
   document.getElementById("rSave").onclick=()=>{const n=document.getElementById("rName").value.trim(); if(!n){document.getElementById("fRuleErr").textContent="ルールの名前を入れてください";return;} saveRule(n); render();};
@@ -935,7 +946,20 @@ function bindFreeDay(){
 }
 
 /* --- ルールとメンバー --- */
-let editP=null;
+let editP=null, ruleDraft=null, ruleDraftName="", ruleEditId=null, ruleMakeOpen=false;
+const resetDraft=()=>{ruleDraft=null;ruleDraftName="";ruleEditId=null;ruleMakeOpen=false;};
+function ruleMakeHTML(){
+  const r=ruleDraft=ruleDraft||ruleCopy(freeState().rule);
+  return `<details id="rMake" style="scroll-margin-top:96px" ${ruleMakeOpen||!db.rules.length?"open":""}><summary>${ruleEditId?"ルールを直す":"ルールを作る"}</summary><div class="stack" style="margin-top:8px">
+    ${seg("rdmode",[[4,"四麻"],[3,"三麻"]],r.mode)}
+    <div class="rulebox"><b>${ruleEditId?"直したあとのルール":"作るルール"}</b><br><span id="rdNow">${ruleLine(r)}</span><br><span class="note" id="rdNote">${ruleNote(r)}</span></div>
+    ${ruleFields(r,"drule",true)}
+    <label class="f">ルールの名前<input id="rName2" placeholder="例：いつもの三麻" value="${esc(ruleDraftName)}"></label>
+    ${ruleEditId?'<p class="note">直しても、これまでの記録の点数は変わりません。</p>':""}
+    <span class="warn" id="rErr"></span>
+    <div class="row"><button class="small primary" id="rSave2">このルールを保存</button>${ruleEditId?'<button class="small ghost" id="rCancel">やめる</button>':""}</div>
+  </div></details>`;
+}
 const COLORS=["#4f6b55","#2f6fb0","#c0443b","#b8892c","#7a5ea8","#2d8a8a","#c06a2b","#6b6b6b"];
 function viewPlayers(){
   const me=db.settings.me, def=db.settings.defaultRule;
@@ -943,13 +967,12 @@ function viewPlayers(){
   <section class="card"><h2>保存したルール</h2>
   <p class="note">保存したルールは、フリーとセットの画面で選ぶだけで使えます。既定にしたルールは、最初から選ばれた状態で出ます。</p>
   <div class="list">${db.rules.map(x=>`<div class="stack item" style="cursor:default;display:grid"><div><b>${esc(x.name)}</b>${def===x.id?' <span class="tag">既定</span>':""}<br><span class="meta">${ruleLine(x.rule)}<br>${ruleNote(x.rule)}</span></div>
-    <div class="row"><button class="small" data-suse="r:${x.id}">セットで使う</button><button class="small" data-ruse="${x.id}">フリーで使う</button><button class="small ghost" data-rdef="${x.id}">${def===x.id?"既定を外す":"既定にする"}</button><button class="small ghost" data-rdel="${x.id}">消す</button></div></div>`).join("")||'<p class="note">まだありません。下の欄で、いまのフリーのルールを保存できます。</p>'}</div>
+    <div class="row"><button class="small" data-suse="r:${x.id}">セットで使う</button><button class="small" data-ruse="${x.id}">フリーで使う</button><button class="small ghost" data-redit="${x.id}">直す</button><button class="small ghost" data-rdef="${x.id}">${def===x.id?"既定を外す":"既定にする"}</button><button class="small ghost" data-rdel="${x.id}">消す</button></div></div>`).join("")||'<p class="note">まだありません。下の「ルールを作る」で作れます。</p>'}</div>
+  ${ruleMakeHTML()}
   <h3>よくあるルール</h3>
-  <div class="list">${["m4f","m4g","m3f"].map(k=>{const r=RULE_PRESETS[k];return `<div class="stack item" style="cursor:default;display:grid"><div><b>${r.label}</b><br><span class="meta">${r.note}<br>${ruleNote(r)}</span></div><div class="row"><button class="small" data-suse="${k}">セットで使う</button><button class="small" data-puse="${k}">フリーで使う</button></div></div>`;}).join("")}</div>
+  <div class="list">${["m4f","m4g","m3f"].map(k=>{const r=RULE_PRESETS[k];return `<div class="stack item" style="cursor:default;display:grid"><div><b>${r.label}</b><br><span class="meta">${r.note}<br>${ruleNote(r)}</span></div><div class="row"><button class="small" data-suse="${k}">セットで使う</button><button class="small" data-puse="${k}">フリーで使う</button><button class="small ghost" data-pmake="${k}">これを元に作る</button></div></div>`;}).join("")}</div>
   <details><summary>言葉の説明</summary><p class="note">持ち点：最初に持つ点数。返し：計算の基準になる点数。ウマ：着順で増減する分。オカ：持ち点と返しの差の合計で、1着がもらう分。トビ賞：0点以下で払う分。五捨六入：百の位が5までは切り捨て、6からは切り上げ。合計のずれは1着が受けます。レート：千点あたりのPで、0.5は50P、1は100P。</p></details>
-  <p class="note">いまのフリーのルール：${ruleLine(freeState().rule)}</p>
-  <div class="row"><input id="rName2" placeholder="ルールの名前（例：いつもの三麻）" style="flex:1"><button class="small primary" id="rSave2">このルールを保存</button></div>
-  <span class="warn" id="rErr"></span></section>
+  </section>
   <section class="card"><h2 id="memH">メンバー</h2>
   <div class="list">${db.players.filter(p=>!p.guest).map(p=>editP===p.id?`<div class="stack item" style="cursor:default;display:grid"><div class="row"><input id="pEName" value="${esc(p.name)}" aria-label="名前" style="flex:1"><button class="small primary" id="pESave">保存</button><button class="small ghost" id="pENo">やめる</button></div><div class="row">${COLORS.map(c=>`<button class="chip" data-pcolor="${c}" aria-pressed="${c===p.color}" aria-label="色" style="background:${c};min-width:36px;min-height:32px"></button>`).join("")}</div></div>`:`<div class="item" style="cursor:default"><span><span class="dot" style="background:${p.color}"></span>${esc(p.name)}<span class="note">　${db.sessions.filter(s=>s.members.includes(p.id)).length}回参加</span></span><span class="row" style="flex-wrap:nowrap"><button class="small ghost" data-pedit="${p.id}" aria-label="${esc(p.name)}を直す">直す</button>${db.sessions.some(s=>s.members.includes(p.id))?"":`<button class="small ghost" data-pdel="${p.id}" aria-label="${esc(p.name)}を消す">消す</button>`}<button class="chip" data-me="${p.id}" aria-pressed="${me===p.id}">自分</button></span></div>`).join("")||'<p class="note">まだ誰もいません</p>'}</div>
   <p class="note">「自分」を選ぶと、セットの収支もセッションの合計とカレンダーに入ります。</p>
@@ -981,13 +1004,41 @@ function bindPlayers(){
   const toSet=document.getElementById("pToSet"); if(toSet) toSet.onclick=()=>{tab="settings";render();window.scrollTo(0,0);};
   document.querySelectorAll("[data-pdel]").forEach(b=>b.onclick=()=>undoable("メンバーを消しました",()=>{const id=b.dataset.pdel; db.players=db.players.filter(p=>p.id!==id); if(db.settings.me===id) db.settings.me="";}));
   document.querySelectorAll("[data-me]").forEach(b=>b.onclick=()=>{db.settings.me=db.settings.me===b.dataset.me?"":b.dataset.me;save();render();});
-  document.getElementById("rSave2").onclick=()=>{const n=document.getElementById("rName2").value.trim(); if(!n){document.getElementById("rErr").textContent="ルールの名前を入れてください";return;} saveRule(n); render();};
+  bindRuleMake();
   document.querySelectorAll("[data-suse]").forEach(b=>b.onclick=()=>{tab="set";openSession=null;render();window.scrollTo(0,0);document.getElementById("newS").click();const s=document.getElementById("nPreset");s.value=b.dataset.suse;s.onchange();});
   document.querySelectorAll("[data-ruse]").forEach(b=>b.onclick=()=>{Object.assign(freeState().rule,ruleCopy(db.rules.find(x=>x.id===b.dataset.ruse).rule));save();tab="free";render();window.scrollTo(0,0);});
   document.querySelectorAll("[data-puse]").forEach(b=>b.onclick=()=>{const r=freeState().rule; Object.assign(r,ruleCopy({...RULE_PRESETS[b.dataset.puse],rate:r.rate,chipRate:chipFor(RULE_PRESETS[b.dataset.puse].mode,r.rate),fee:r.fee,feeTop:r.feeTop}));save();tab="free";render();window.scrollTo(0,0);});
   document.querySelectorAll("[data-rdef]").forEach(b=>b.onclick=()=>{const id=b.dataset.rdef, on=db.settings.defaultRule===id; db.settings.defaultRule=on?"":id;
     if(!on) Object.assign(freeState().rule,ruleCopy(db.rules.find(x=>x.id===id).rule)); save();render();});
-  document.querySelectorAll("[data-rdel]").forEach(b=>b.onclick=()=>undoable("ルールを消しました",()=>{db.rules=db.rules.filter(x=>x.id!==b.dataset.rdel);}));
+  document.querySelectorAll("[data-rdel]").forEach(b=>b.onclick=()=>undoable("ルールを消しました",()=>{if(ruleEditId===b.dataset.rdel) resetDraft(); db.rules=db.rules.filter(x=>x.id!==b.dataset.rdel);}));
+}
+function bindRuleMake(){
+  const r=ruleDraft, msg=document.getElementById("rErr"), name=document.getElementById("rName2");
+  const toForm=()=>{ruleMakeOpen=true;render();document.getElementById("rMake").scrollIntoView();};
+  document.getElementById("rMake").ontoggle=e=>{ruleMakeOpen=e.target.open;};
+  document.querySelectorAll("[data-rdmode]").forEach(b=>b.onclick=()=>{const m=Number(b.dataset.rdmode); if(m===r.mode) return;
+    Object.assign(r,JSON.parse(JSON.stringify(FREE_RULES[m])),{rate:r.rate,chipRate:chipFor(m,r.rate),tobiDouble:""}); render();});
+  document.querySelectorAll("[data-drule]").forEach(i=>i.onchange=()=>{
+    msg.textContent=setRuleField(i,r,"drule");
+    document.getElementById("rdDoubleBox").style.display=r.tobi?"":"none";
+    document.getElementById("rdNow").textContent=ruleLine(r);
+    document.getElementById("rdNote").textContent=ruleNote(r);
+  });
+  name.oninput=()=>{ruleDraftName=name.value;};
+  document.querySelectorAll("[data-redit]").forEach(b=>b.onclick=()=>{const x=db.rules.find(v=>v.id===b.dataset.redit);
+    ruleDraft=ruleCopy(x.rule); ruleDraftName=x.name; ruleEditId=x.id; toForm();});
+  document.querySelectorAll("[data-pmake]").forEach(b=>b.onclick=()=>{ruleDraft=ruleCopy(RULE_PRESETS[b.dataset.pmake]); ruleDraftName=""; ruleEditId=null; toForm();});
+  const cancel=document.getElementById("rCancel"); if(cancel) cancel.onclick=()=>{resetDraft();render();};
+  document.getElementById("rSave2").onclick=()=>{
+    const n=name.value.trim(), bad=[...document.querySelectorAll("[data-drule]")].map(i=>setRuleField(i,ruleCopy(r),"drule")).find(Boolean);
+    if(bad){msg.textContent=bad;return;}
+    if(!n){msg.textContent="ルールの名前を入れてください";return;}
+    if(ruleEditId){
+      if(db.rules.some(v=>v.name===n&&v.id!==ruleEditId)){msg.textContent="同じ名前のルールがあります。別の名前にしてください";return;}
+      Object.assign(db.rules.find(v=>v.id===ruleEditId),{name:n,rule:ruleCopy(r)}); save();
+    } else if(!saveRule(n,r)) return;
+    resetDraft(); render(); toast("ルールを保存しました");
+  };
 }
 
 /* --- 設定 --- */
@@ -1045,7 +1096,7 @@ const HOWTO=[
   ["ホーム画面に追加する","iPhone は Safari で開き、共有ボタンから「ホーム画面に追加」を選びます。Android は Chrome のメニューから追加します。一度開けば電波がなくても動きます。"],
   ["自分を選ぶ","ルール/メンバのタブで、自分の行の「自分」を押します。セットの収支も、セッションの合計とカレンダーに入ります。"],
   ["メンバーとゲスト",`無料で登録できるメンバーは${FREE_PLAYERS}人までです。1回だけの人は、セットを始めるときにゲストを選びます。ゲストは人数に数えません。ゲスト1は別の日でも同じ1人として成績に出ます。`],
-  ["ルールを選ぶ","ルール/メンバのタブで説明を見て、「セットで使う」か「フリーで使う」を押します。よく使うルールは名前をつけて保存し、「既定にする」と最初から選ばれた状態で出ます。"]]],
+  ["ルールを選ぶ","ルール/メンバのタブで説明を見て、「セットで使う」か「フリーで使う」を押します。よく使うルールは「ルールを作る」で四麻か三麻を選び、持ち点やウマを入れて、名前をつけて保存します。保存したルールは「直す」で変えられ、「既定にする」と最初から選ばれた状態で出ます。"]]],
  ["記録する",[
   ["フリーの結果を出す","着順を選び、点数を入れて「記録する」を押します。四麻は 300、三麻は 30 で 30000点です。箱下は「−」です。同卓の人は入れません。"],
   ["セットを始める","セットのタブの「＋ 新しく始める」で、ルールとメンバーを選んで「始める」を押します。半荘ごとに「記録する」を押し、終わったら「このセッションを記録する」を押します。入れた内容はその場で保存されています。"],
@@ -1064,9 +1115,9 @@ const HOWTO=[
   ["場代を分ける","セットの「精算」に全員の合計を入れ、割り勘、勝ち額で、トップの3つから選びます。「勝ち額で」は勝った額に応じて払うので、順番は変わりません。"],
   ["精算を見る","セットの画面の下の「精算」に、人ごとの収支と、誰が誰にいくら渡すかが出ます。半荘やチップを入れるたびに変わります。あとからはセッションのタブでその回を開きます。"],
   ["入れた半荘を直す・消す","セットは表の「直す」「消す」を押します。フリーはセッションのタブでその日を開きます。消した直後は「元に戻す」で戻せます。"],
-  ["成績を絞る","成績のタブで、期間、四麻と三麻、レート、場所、メンバーを組み合わせて選びます。何も選ばなければ全部を集計します。"]]],
+  ["成績を絞る","成績のタブで、期間、四麻と三麻を選びます。レート、場所、メンバー、セッションを選ぶ組み合わせの集計は拡張機能です。何も選ばなければ全部を集計します。"]]],
  ["データ",[
-  ["データはどこにあるか","記録はこの端末の中だけに残ります。半荘を記録するたびにその場で保存し、入れかけの数字も残すので、アプリが落ちても開き直せば続きから入れられます。端末の故障やブラウザのデータ削除では消えるので、外へのバックアップも使ってください。"],
+  ["データはどこにあるか","記録はこの端末の中だけに残ります。同じ端末でも、別のブラウザでは記録を見られません。ホーム画面のアイコンと Safari でも分かれることがあります。いつも同じ開き方で使ってください。半荘を記録するたびにその場で保存し、入れかけの数字も残すので、アプリが落ちても開き直せば続きから入れられます。端末の故障やブラウザのデータ削除では消えるので、外へのバックアップも使ってください。"],
   ["機種変更するとき","前の端末の設定で、バックアップ（拡張機能）をファイルに保存します。新しい端末で「バックアップから戻す」からそのファイルを選びます。"],
   ["バックアップから戻す","設定の一番上でファイルを選ぶと、今の記録との見比べが出ます。確かめて戻すと、読み直して同じ内容かを確かめます。戻すのは無料です。"]]]];
 const howtoHTML=()=>`<section class="card" id="howto"><div class="row between"><h2>使い方</h2><button class="small ghost" id="tourAgain">最初の案内を見る</button></div>${HOWTO.map(([h,xs])=>`<h3>${h}</h3>${xs.map(([q,a])=>`<details><summary>${q}</summary><p class="note">${a}</p></details>`).join("")}`).join("")}</section>`;
@@ -1077,7 +1128,7 @@ function viewUnlock(){
   return `<section class="card"><h2>拡張機能</h2>
     ${unlocked()?`<p class="note"><b>試用中です。${new Date(until-1).toISOString().slice(0,10)} まで使えます。</b></p>`:db.settings.unlocked&&until?`<p class="warn">${db.settings.trial?"試用":"コード"}の期限が切れました。記録はそのまま残っていて、見ることも入れることもできます。</p>`:""}
     ${canTrial(db.settings)?`<div class="row"><button class="small primary" id="trialOk">${TRIAL_DAYS}日試す</button><span class="note">コードなしで全部使えます。1回だけです。</span></div>`:""}
-    <p class="note">メンバーを${FREE_PLAYERS+1}人以上登録でき、バックアップ・別の端末の記録を足す・条件の保存・成績の1枚まとめ・半荘ごとのチップ・CSV/Excel の書き出しが使えるようになります。買い切りで月額はありません。販売ページは準備中です。</p>
+    <p class="note">メンバーを${FREE_PLAYERS+1}人以上登録でき、レートやメンバーを組み合わせた集計・バックアップ・別の端末の記録を足す・条件の保存・成績の1枚まとめ・半荘ごとのチップ・CSV/Excel の書き出しが使えるようになります。買い切りで月額はありません。販売ページは準備中です。</p>
     <div class="row"><input id="codeIn" placeholder="コードを貼り付け" autocapitalize="none" autocorrect="off" spellcheck="false" autocomplete="off" style="flex:1"><button class="primary" id="codeOk">開く</button></div>
     <span class="warn" id="codeMsg"></span></section>`;
 }
@@ -1137,7 +1188,7 @@ function viewSettings(){
   return `${viewRestore()}
   ${viewUnlock()}
   <section class="card"><h2>バックアップ${on?"":'<span class="lock">拡張</span>'}</h2>
-    <p class="note">記録はこの端末の中だけにあります。ファイルに保存しておけば、機種変更でも戻せます。</p>
+    <p class="note">記録はこの端末の中だけにあり、別のブラウザでは見られません。ファイルに保存しておけば、機種変更でも戻せます。</p>
     ${!on&&db.settings.unlocked&&db.settings.unlockUntil&&!db.settings.lastSaveDone?`<p class="note">期限が切れたあとも記録を外に残せるよう、最後の1回だけ保存できます。</p><div class="row"><button class="small primary" id="bkLast">最後の1回を保存</button><span class="note" id="bkMsg"></span></div>`:""}
     ${on?`<p class="note">前回の保存：${db.settings.backupAt?fmtAt(db.settings.backupAt):"まだありません"}（保存していない記録 ${unsavedGames(db)}半荘）。iPhone は「ファイルに保存」を押して、出てきた画面で「"ファイル"に保存」を選びます。</p>`:""}
     ${on?`<div class="row"><button class="small primary" id="bkFile">ファイルに保存</button><span class="note" id="bkMsg"></span></div>
