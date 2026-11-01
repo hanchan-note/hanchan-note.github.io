@@ -570,7 +570,7 @@ function newBoxHTML(){
   <label class="f" id="nDoubleBox">ダブル飛ばし<select id="nDouble">${doubleOpts("")}</select></label></div></details>
   <div><span class="note">メンバー（四麻は4人、三麻は3人。4人で回す三麻は4人を選ぶ）</span><div class="row" id="nMem">${ps.slice(0,MEM_SHOW).map(memChip).join("")||'<span class="note">先にルール/メンバのタブでメンバーを追加してください</span>'}</div>
   ${ps.length>MEM_SHOW?`<details><summary>ほかの人（${ps.length-MEM_SHOW}人）</summary><div class="row" style="margin-top:8px">${ps.slice(MEM_SHOW).map(memChip).join("")}</div></details>`:""}
-  <div class="row" style="margin-top:8px"><span class="note">1回だけの人</span>${GUESTS.map(id=>memChip({id,name:"ゲスト"+id.slice(5)})).join("")}</div></div>
+  <div class="row" style="margin-top:8px"><span class="note">ゲストを選ぶ</span>${GUESTS.map(id=>memChip({id,name:"ゲスト"+id.slice(5)})).join("")}</div></div>
   <button class="primary wide" id="nOk">始める</button><span class="warn" id="nErr"></span>`;
 }
 function bindSet(){
@@ -810,11 +810,11 @@ function saveRule(name,r=freeState().rule){
 }
 // ルールの入力欄。フリーの「ルールを変える」とルールのタブの「ルールを作る」で同じものを使う
 const ruleFields=(r,key,double=false)=>`<div class="grid2"><label class="f">持ち点<input inputmode="numeric" data-${key}="start" value="${r.start}"></label><label class="f">返し<input inputmode="numeric" data-${key}="ret" value="${r.ret}"></label></div>
-    <div class="grid2"><label class="f">ウマ（5-10 や 5,10 でも可）<input data-${key}="uma" value="${r.uma.join(",")}"></label><label class="f">トビ賞（なしは0）<input inputmode="decimal" data-${key}="tobi" value="${r.tobi||0}"></label></div>
+    <div class="grid2"><label class="f">ウマ（5-10 か 5,10 の形）<input data-${key}="uma" value="${r.uma.join(",")}"></label><label class="f">トビ賞（なしなら0）<input inputmode="decimal" data-${key}="tobi" value="${r.tobi||0}"></label></div>
     ${double?`<label class="f" id="rdDoubleBox" style="display:${r.tobi?"":"none"}">ダブル飛ばし<select data-${key}="tobiDouble">${doubleOpts(r.tobiDouble)}</select></label>`:""}
     <label class="f">千点未満の端数<select data-${key}="round">${roundOpts(r.round)}</select></label>
     <div class="grid2"><label class="f">千点あたり（P）<input inputmode="decimal" data-${key}="rate" value="${r.rate}"></label><label class="f">チップ1枚（P）<input inputmode="decimal" data-${key}="chipRate" value="${r.chipRate}"></label></div>
-    <div class="grid2"><label class="f">ゲーム代（P）<input inputmode="decimal" data-${key}="fee" value="${r.fee}"></label><label class="f">トップのゲーム代（同じなら空）<input inputmode="decimal" data-${key}="feeTop" value="${r.feeTop}"></label></div>`;
+    <div class="grid2"><label class="f">ゲーム代（P）<input inputmode="decimal" data-${key}="fee" value="${r.fee}"></label><label class="f">トップのゲーム代（同じなら空欄）<input inputmode="decimal" data-${key}="feeTop" value="${r.feeTop}"></label></div>`;
 // 入力欄の値をルールに入れる。入れられないときは直し方の文を返す
 function setRuleField(i,r,key){
   const k=i.dataset[key];
@@ -952,7 +952,7 @@ function ruleMakeHTML(){
   const r=ruleDraft=ruleDraft||ruleCopy(freeState().rule);
   return `<details id="rMake" style="scroll-margin-top:96px" ${ruleMakeOpen||!db.rules.length?"open":""}><summary>${ruleEditId?"ルールを直す":"ルールを作る"}</summary><div class="stack" style="margin-top:8px">
     ${seg("rdmode",[[4,"四麻"],[3,"三麻"]],r.mode)}
-    <div class="rulebox"><b>${ruleEditId?"直したあとのルール":"作るルール"}</b><br><span id="rdNow">${ruleLine(r)}</span><br><span class="note" id="rdNote">${ruleNote(r)}</span></div>
+    <div class="rulebox"><b>ルールの内容</b><br><span id="rdNow">${ruleLine(r)}</span><br><span class="note" id="rdNote">${ruleNote(r)}</span></div>
     ${ruleFields(r,"drule",true)}
     <label class="f">ルールの名前<input id="rName2" placeholder="例：いつもの三麻" value="${esc(ruleDraftName)}"></label>
     ${ruleEditId?'<p class="note">直しても、これまでの記録の点数は変わりません。</p>':""}
