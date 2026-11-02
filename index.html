@@ -250,7 +250,14 @@ view.addEventListener("click",e=>{
   i.dispatchEvent(new Event("input",{bubbles:true}));
   if(body) i.dispatchEvent(new Event("change",{bubbles:true})); else i.focus();
 });
-document.querySelectorAll("nav.tabs button").forEach(b=>b.onclick=()=>{tab=b.dataset.tab;openSession=tab==="set"?todaySet():null;editGame=null;freeEdit=null;render();window.scrollTo(0,0);});
+// 今日のセットを「このセッションを記録する」の前に離れるときだけ確かめる。入れた内容はもう保存されている
+function leaveSession(){
+  const s=db.sessions.find(x=>x.id===openSession);
+  if(!s||!s.games.length||s.date!==today()||s.done===s.games.length) return true;
+  if(!confirm("このセッションはまだ記録していません。記録して移動しますか？\n\n入れた内容は保存されています。キャンセルなら、この画面に残ります。")) return false;
+  s.done=s.games.length; save(); toast("記録しました"); return true;
+}
+document.querySelectorAll("nav.tabs button").forEach(b=>b.onclick=()=>{if(b.dataset.tab!==tab&&!leaveSession())return;tab=b.dataset.tab;openSession=tab==="set"?todaySet():null;editGame=null;freeEdit=null;render();window.scrollTo(0,0);});
 
 // 消す・直すは確認を出さず、8秒だけ「元に戻す」を出す。戻すのは操作の前の記録全体
 let undo=null, undoTimer=null;
@@ -611,7 +618,7 @@ const chipNote=(g,id)=>(g.chips||{})[id]?`<br><span class="note">チップ${g.ch
 function viewSession(s){
   if(!s){openSession=null;editGame=null;return tab==="set"?viewSet():viewSessions();}
   if(editGame!==null&&!s.games[editGame]) editGame=null;
-  const t=sessionTotals(s); const nets=Object.fromEntries(Object.entries(t).map(([k,v])=>[k,v.net])); const pay=settle(nets);
+  const t=sessionTotals(s); const nets=Object.fromEntries(Object.entries(t).map(([k,v])=>[k,v.net])); const pay=settlePay(s,t), payer=venuePayer(s,t), unit=settleUnit(s);
   const gap=Object.values(nets).reduce((a,b)=>a+b,0), chipOff=round1(chipGap(s)), fee=Number(s.rule.fee||0), hasExtra=(s.extras||[]).length>0;
   const head=s.members.map(id=>`<th>${esc(P(id).name)}</th>`).join("");
   const rows=s.games.map((g,gi)=>{const r=scoreGame(g.scores,s.rule,g.order||s.members,g.tobiBy);
@@ -645,13 +652,16 @@ function viewSession(s){
   <section class="card"><h2>精算</h2>
     <label class="f">場代（全員の合計・P）<input inputmode="numeric" id="sVenue" placeholder="0" value="${s.venue&&s.venue.amount||""}"></label>
     ${s.venue&&s.venue.amount?seg("vhow",[["equal","割り勘"],["win","勝ち額で"],["top","トップ"]],s.venue.how||"equal"):""}
+    ${s.venue&&s.venue.amount?`<div><span class="note">店へまとめて払う人</span><div class="row">${[...s.members.map(id=>[id,esc(P(id).name)]),["each","各自"]].map(([v,l])=>`<button class="chip" data-vpay="${v}" aria-pressed="${(payer||"each")===v}">${l}</button>`).join("")}</div></div>`:""}
     ${s.venue&&s.venue.amount&&venueFlips(t)?`<p class="warn">${s.venue.how==="top"?"トップが払うと収支の順番が入れ替わります。「勝ち額で」なら、順番は変わりません。":"場代を引くと収支の順番が入れ替わります。分け方を確かめてください。"}</p>`:""}
     <div class="tablebox"><table><thead><tr><th>名前</th><th>ポイント</th><th>チップ</th>${hasExtra?"<th>その他</th>":""}<th>場代</th><th>収支</th></tr></thead><tbody>
     ${s.members.map(id=>`<tr><td><span class="dot" style="background:${P(id).color}"></span>${esc(P(id).name)}</td><td class="${cls(t[id].point)}">${fmtPt(t[id].point)}</td><td>${t[id].chips}</td>${hasExtra?`<td class="${cls(t[id].extra)}">${t[id].extra.toLocaleString()}</td>`:""}<td>${t[id].fee}</td><td class="${cls(t[id].yen)}"><b>${fmtP(t[id].yen)}</b></td></tr>`).join("")}
     </tbody></table></div>
     ${s.games.length?`<h3>着順の回数</h3><div class="tablebox"><table id="sRanks"><thead><tr><th>名前</th>${Array.from({length:s.rule.mode},(_,k)=>`<th>${k+1}着</th>`).join("")}<th>半荘</th></tr></thead><tbody>${s.members.map(id=>`<tr><td>${esc(P(id).name)}</td>${rankDist(t[id].spans,s.rule.mode).map(x=>`<td>${round1(x)}</td>`).join("")}<td>${t[id].games}</td></tr>`).join("")}</tbody></table></div>`:""}
     <div class="list">${pay.map(x=>`<div class="item" style="cursor:default"><span>${esc(P(x.from).name)} → ${esc(P(x.to).name)}</span><b class="num">${x.yen.toLocaleString()}P</b></div>`).join("")||'<span class="note">まだ精算はありません</span>'}</div>
-    ${fee||(s.venue&&s.venue.amount)?`<p class="note">場代は店へ払う分なので、人の間の精算には入れず、収支からだけ引いています。</p>`:""}
+    <div><span class="note">渡す額の丸め</span>${seg("vunit",[[1,"そのまま"],[10,"10P"],[100,"100P"]],unit)}</div>
+    ${payer?`<p class="note">${esc(P(payer).name)}が場代をまとめて店へ払う形で計算しています。</p>`:fee||(s.venue&&s.venue.amount)?`<p class="note">場代は各自が店へ払う形なので、人の間の精算には入れず、収支からだけ引いています。</p>`:""}
+    ${unit>1?`<p class="note">渡す額は${unit}P単位に四捨五入しています。上の表の収支はそのままです。</p>`:""}
     ${gap?`<p class="warn">やり取りの合計が ${gap.toLocaleString()}Pずれています。チップやその他の項目の回数を確かめてください。</p>`:""}
     ${s.games.length?`<button class="wide" id="sShare">精算を共有（LINE など）</button><textarea id="shareBox" readonly hidden rows="8"></textarea>`:""}
     ${editGame===null?`<button class="primary wide" id="sDone">このセッションを記録する</button>`:""}
@@ -695,7 +705,7 @@ function bindExtras(s){
 function bindSession(){
   const s=db.sessions.find(x=>x.id===openSession); if(!s) return;
   bindExtras(s);
-  document.getElementById("back").onclick=()=>{openSession=null;editGame=null;render();window.scrollTo(0,0);};
+  document.getElementById("back").onclick=()=>{if(!leaveSession())return;openSession=null;editGame=null;render();window.scrollTo(0,0);};
   const all=[...document.querySelectorAll("[data-sc]")];
   // 4人で回す三麻は抜ける人の欄を隠す。入れかけの数字は残しておく
   let out=s.members.length<=s.rule.mode?null:editGame!==null?outOf(s,s.games[editGame]):(resume.sc[s.id]||{})._out||nextOut(s);
@@ -766,9 +776,11 @@ function bindSession(){
   };
   const done=document.getElementById("sDone"); if(done) done.onclick=()=>{
     if(live().some(i=>i.value.trim()!=="")){document.getElementById("gErr").textContent="入れかけの点数があります。先に「記録する」を押すか、消してください";document.getElementById("gErr").scrollIntoView({block:"center"});return;}
-    openSession=null; tab="sessions"; render(); window.scrollTo(0,0); toast("記録しました"); };
+    s.done=s.games.length; save(); openSession=null; tab="sessions"; render(); window.scrollTo(0,0); toast("記録しました"); };
   document.getElementById("sVenue").onchange=e=>{const n=parseSigned(e.target.value)||0; s.venue={...s.venue,amount:Math.max(n,0)}; save(); render();};
   document.querySelectorAll("[data-vhow]").forEach(b=>b.onclick=()=>{s.venue={...s.venue,how:b.dataset.vhow}; save(); render();});
+  document.querySelectorAll("[data-vpay]").forEach(b=>b.onclick=()=>{s.venue={...s.venue,payer:b.dataset.vpay}; save(); render();});
+  document.querySelectorAll("[data-vunit]").forEach(b=>b.onclick=()=>{s.venue={...s.venue,unit:Number(b.dataset.vunit)}; save(); render();});
   document.getElementById("sSave").onclick=()=>{
     const v=id=>document.getElementById(id).value, u=parseUma(v("sUma"),s.rule.mode), nums=["sRate","sChipR","sFee","sStart","sRet"].map(id=>parseSigned(v(id)));
     if(!u){document.getElementById("sErr").textContent=umaHelp(s.rule.mode);return;}
@@ -1112,7 +1124,7 @@ const HOWTO=[
   ["チップを入れる","半荘の終わりに、その時点の合計枚数を入れます。前の数は上書きされます。全員を足すと0枚になります。"]]],
  ["見る・直す",[
   ["セッションのタブ","フリーの日とセットの回が1本に並びます。「＋ セットを記録」「＋ フリーを記録」から入力の画面へ進みます。その日のセットがあれば続きが開きます。"],
-  ["場代を分ける","セットの「精算」に全員の合計を入れ、割り勘、勝ち額で、トップの3つから選びます。「勝ち額で」は勝った額に応じて払うので、順番は変わりません。"],
+  ["場代を分ける","セットの「精算」に全員の合計を入れ、割り勘、勝ち額で、トップの3つから選びます。「勝ち額で」は勝った額に応じて払うので、順番は変わりません。店へまとめて払う人を選ぶと、場代の分も渡す額に入ります。最初は収支が一番の人で、「各自」なら渡す額に入りません。渡す額は最初は100P単位に丸めます。"],
   ["精算を見る","セットの画面の下の「精算」に、人ごとの収支と、誰が誰にいくら渡すかが出ます。半荘やチップを入れるたびに変わります。あとからはセッションのタブでその回を開きます。"],
   ["入れた半荘を直す・消す","セットは表の「直す」「消す」を押します。フリーはセッションのタブでその日を開きます。消した直後は「元に戻す」で戻せます。"],
   ["成績を絞る","成績のタブで、期間、四麻と三麻を選びます。レート、場所、メンバー、セッションを選ぶ組み合わせの集計は拡張機能です。何も選ばなければ全部を集計します。"]]],

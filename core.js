@@ -320,11 +320,28 @@ function sessionTotals(s){
 function settleText(s,name){
   const t=sessionTotals(s), [,m,d]=s.date.split("-").map(Number), p=v=>v.toLocaleString("ja-JP")+"P";
   const lines=[`${m}/${d} 半荘ノート`,...s.members.slice().sort((a,b)=>t[b].yen-t[a].yen).map(id=>`${name(id)} ${t[id].yen===0?"±0P":(t[id].yen>0?"+":"−")+p(Math.abs(t[id].yen))}`)];
-  lines.push(...settle(Object.fromEntries(s.members.map(id=>[id,t[id].net]))).map(x=>`${name(x.from)} → ${name(x.to)} ${p(x.yen)}`));
-  if(s.members.some(id=>t[id].fee)) lines.push("※場代は収支から引いてあり、やり取りには入れていません");
+  lines.push(...settlePay(s,t).map(x=>`${name(x.from)} → ${name(x.to)} ${p(x.yen)}`));
+  const payer=venuePayer(s,t), unit=settleUnit(s);
+  if(payer) lines.push(`※場代は${name(payer)}がまとめて店へ払います`);
+  else if(s.members.some(id=>t[id].fee)) lines.push("※場代は収支から引いてあり、やり取りには入れていません");
+  if(unit>1) lines.push(`※やり取りは${unit}P単位です`);
   return lines.join("\n");
 }
 
+// 場代を店へまとめて払う人。選んでいなければ収支が一番の人、"each" は各自が払うので空を返す
+function venuePayer(s,t=sessionTotals(s)){
+  const v=s.venue||{};
+  if(!Number(v.amount||0)||v.payer==="each") return "";
+  return s.members.includes(v.payer)?v.payer:s.members.reduce((a,b)=>t[b].yen>t[a].yen?b:a);
+}
+const settleUnit=s=>Number((s.venue||{}).unit??100);
+// セットのやり取り。店へ払う人がいれば場代の分も人の間で集める。収支の表は丸めず、渡す額だけ unit 単位に四捨五入する
+function settlePay(s,t=sessionTotals(s)){
+  const payer=venuePayer(s,t), unit=settleUnit(s), base=Number(s.rule.fee||0), bal={};
+  s.members.forEach(id=>{bal[id]=payer?t[id].net-(t[id].fee-base):t[id].net;});
+  if(payer) bal[payer]+=Number(s.venue.amount);
+  return settle(bal).map(x=>({...x,yen:unit>1?Math.round(x.yen/unit)*unit:x.yen})).filter(x=>x.yen>0);
+}
 // 精算：払う回数が少なくなるように、一番負けた人から一番勝った人へ順に払う
 function settle(yenById){
   const pos = Object.entries(yenById).filter(([,v])=>v>0).map(([id,v])=>({id,v})).sort((a,b)=>b.v-a.v);
@@ -430,4 +447,4 @@ function backupDue(d){
   return gameCount(d)-Math.max(Number(d.settings.backupGames||0),Number(d.settings.nudgeSkip||0)) >= every;
 }
 
-if(typeof module!=="undefined") module.exports={basicFilter,mergeBackup,syncGameChips,startGameChips,stopGameChips,settleText,rankDist,outOf,nextOut,TRIAL_DAYS,canTrial,startTrial,swapPlayer,mergePlayer,parseUma,umaHelp,hasSample,clearSample,parseSigned,parseScore,freeResult,scoreGame,roundKeepTotal,extraGap,chipGap,sessionTotals,settle,filterSessions,playerStats,toCSV,RULE_PRESETS,verifyCode,isUnlocked,CODE_EPOCH,isBackup,gameCount,nextSnaps,unsavedGames,backupDue,ruleNote,tieGroups,venueShares,venueFlips,impossibleScore,scoreUnit,roundScore,playersByRecent,FREE_PLAYERS,canAddPlayer,GUESTS,ensureGuest,freeSummary,freeDays,filterFree,chipFor,quickTable,backupSummary,logEntries,logTotals,dayMap,monthGrid,shiftMonth};
+if(typeof module!=="undefined") module.exports={settlePay,venuePayer,settleUnit,basicFilter,mergeBackup,syncGameChips,startGameChips,stopGameChips,settleText,rankDist,outOf,nextOut,TRIAL_DAYS,canTrial,startTrial,swapPlayer,mergePlayer,parseUma,umaHelp,hasSample,clearSample,parseSigned,parseScore,freeResult,scoreGame,roundKeepTotal,extraGap,chipGap,sessionTotals,settle,filterSessions,playerStats,toCSV,RULE_PRESETS,verifyCode,isUnlocked,CODE_EPOCH,isBackup,gameCount,nextSnaps,unsavedGames,backupDue,ruleNote,tieGroups,venueShares,venueFlips,impossibleScore,scoreUnit,roundScore,playersByRecent,FREE_PLAYERS,canAddPlayer,GUESTS,ensureGuest,freeSummary,freeDays,filterFree,chipFor,quickTable,backupSummary,logEntries,logTotals,dayMap,monthGrid,shiftMonth};
