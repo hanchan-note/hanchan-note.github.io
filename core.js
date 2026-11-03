@@ -182,13 +182,14 @@ function mergePlayer(d,from,to){
   return {moved,skipped};
 }
 
-// 点数を読む。200以下は千点単位（30→30000、32.5→32500、5-→-5000）、それより大きければそのまま
+// 点数を読む。999以下は単位を掛ける（千点単位なら 30→30000、32.5→32500、5-→-5000）、それより大きければそのまま
 // 点数の入力単位。四麻は100点棒があるので 300 で 30000点、三麻は 30 で 30000点。ポイントで入れる形は数のまま
 const scoreUnit=r=>r&&r.mode===4&&!r.direct?100:1000;
 function parseScore(v,unit=1000){
   const n=parseSigned(v);
   if(n===null) return null;
-  return Math.round(Math.abs(n)<=(unit===100?999:200) ? n*unit : n);
+  // 999 までは単位を掛ける（四麻 300 → 30000点、三麻 300 → 300000点）。1000 からはそのままの点数
+  return Math.round(Math.abs(n)<=999 ? n*unit : n);
 }
 
 // フリーの1半荘：自分の点数と着順だけで出す。ゲーム代は負け分と同じく引く。feeTop はトップだけ違う店のため

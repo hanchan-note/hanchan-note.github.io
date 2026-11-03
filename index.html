@@ -788,6 +788,7 @@ function bindSession(){
     const v=id=>document.getElementById(id).value, u=parseUma(v("sUma"),s.rule.mode), nums=["sRate","sChipR","sFee","sStart","sRet"].map(id=>parseSigned(v(id)));
     if(!u){document.getElementById("sErr").textContent=umaHelp(s.rule.mode);return;}
     if(nums.includes(null)||!v("sDate")){document.getElementById("sErr").textContent="日付と数字を入れてください";return;}
+    if(nums[3]!==s.rule.start&&s.games.length&&!s.rule.direct&&!confirm(`持ち点を変えると、記録した${s.games.length}半荘の点数の合計が合わなくなり、計算が止まります。点数を入れ間違えたときは、半荘ごとに「直す」で直してください。\n\nこのまま持ち点を変えますか？`)) return;
     undoable("この回を直しました",()=>{ s.date=v("sDate"); s.title=v("sTitle").trim(); s.tags=v("sTags").split(/\s+/).filter(Boolean);
       [s.rule.rate,s.rule.chipRate,s.rule.fee,s.rule.start,s.rule.ret]=nums; s.rule.uma=u; s.rule.round=v("sRound"); if(s.rule.tobi) s.rule.tobiDouble=v("sDouble"); });
   };
@@ -825,11 +826,12 @@ function saveRule(name,r=freeState().rule){
 }
 // ルールの入力欄。フリーの「ルールを変える」とルールのタブの「ルールを作る」で同じものを使う
 const ruleFields=(r,key,double=false)=>`<div class="grid2"><label class="f">持ち点<input inputmode="numeric" data-${key}="start" value="${r.start}"></label><label class="f">返し<input inputmode="numeric" data-${key}="ret" value="${r.ret}"></label></div>
-    <div class="grid2"><label class="f">ウマ（5-10 か 5,10 の形）<input data-${key}="uma" value="${r.uma.join(",")}"></label><label class="f">トビ賞（なしなら0）<input inputmode="decimal" data-${key}="tobi" value="${r.tobi||0}"></label></div>
+    <div class="grid2"><label class="f">ウマ（${r.mode===3?"三麻は 20 か 20,0,-20":"5-10 か 5,10"} の形）<input data-${key}="uma" value="${r.uma.join(",")}"></label><label class="f">トビ賞（なしなら0）<input inputmode="decimal" data-${key}="tobi" value="${r.tobi||0}"></label></div>
     ${double?`<label class="f" id="rdDoubleBox" style="display:${r.tobi?"":"none"}">ダブル飛ばし<select data-${key}="tobiDouble">${doubleOpts(r.tobiDouble)}</select></label>`:""}
     <label class="f">千点未満の端数<select data-${key}="round">${roundOpts(r.round)}</select></label>
     <div class="grid2"><label class="f">千点あたり（P）<input inputmode="decimal" data-${key}="rate" value="${r.rate}"></label><label class="f">チップ1枚（P）<input inputmode="decimal" data-${key}="chipRate" value="${r.chipRate}"></label></div>
-    <div class="grid2"><label class="f">ゲーム代（P）<input inputmode="decimal" data-${key}="fee" value="${r.fee}"></label><label class="f">トップのゲーム代（同じなら空欄）<input inputmode="decimal" data-${key}="feeTop" value="${r.feeTop}"></label></div>`;
+    <div class="grid2"><label class="f">ゲーム代（P）<input inputmode="decimal" data-${key}="fee" value="${r.fee}"></label><label class="f">トップが払うゲーム代（P）<input inputmode="decimal" data-${key}="feeTop" value="${r.feeTop}" placeholder="ほかの人と同じ"></label></div>
+    <p class="note">トップだけゲーム代が違う店では、トップが払う額をそのまま入れます。ほかの人との差額ではありません。全員同じなら空欄にします。</p>`;
 // 入力欄の値をルールに入れる。入れられないときは直し方の文を返す
 function setRuleField(i,r,key){
   const k=i.dataset[key];
@@ -847,6 +849,11 @@ function freeRanks(games){
   const ms=[4,3].filter(m=>games.some(g=>g.rule.mode===m));
   return ms.map(m=>`${ms.length>1?modeName(m)+" ":"今日 "}${rankDist(games.filter(g=>g.rule.mode===m).map(g=>({best:g.rank,worst:g.rank})),m).map((n,k)=>`${k+1}着${n}回`).join("・")}`).join("<br>");
 }
+// 入れかけの点数を戻す。四麻と三麻を切り替えたときは、点数はそのままで入れ方だけ今のルールに合わせる
+function keptScore(kept,r){
+  if(!kept.score||!kept.unit||kept.unit===scoreUnit(r)) return kept.score||"";
+  const sc=parseScore(kept.score,kept.unit); return sc===null?kept.score:String(sc/scoreUnit(r));
+}
 function viewFree(){
   const f=freeState(), r=f.rule, day=today(), kept=resume.free;
   if(freeRank>r.mode) freeRank=1;
@@ -859,7 +866,7 @@ function viewFree(){
     <div class="rulebox"><b>今のルール</b><br><span id="fRuleNow">${ruleLine(r)}</span><br><span class="note" id="fRuleNote">${ruleNote(r)}</span></div>
     ${unitNote(r)}
     <div class="seg">${Array.from({length:r.mode},(_,k)=>`<button class="chip" data-frank="${k+1}" aria-pressed="${freeRank===k+1}">${k+1}着</button>`).join("")}</div>
-    <label class="f">自分の点数${sfield(`id="fScore" placeholder="${r.mode===4?"300":"30"}"`,kept.score||"")}</label>
+    <label class="f">自分の点数${sfield(`id="fScore" placeholder="${r.mode===4?"300":"30"}"`,keptScore(kept,r))}</label>
     <label class="f">チップ（任意）${chipField('id="fChip" placeholder="0"',kept.chip||"")}</label>
     ${r.tobi?`<button class="chip" id="fTobi" aria-pressed="${freeTobi}">飛ばした（+${r.tobi}）</button>`:""}
     <div class="free-out" id="fOut" aria-live="polite">-</div>
@@ -868,12 +875,15 @@ function viewFree(){
     <span class="warn" id="fErr"></span>${freeFlash?`<span class="note" role="status">${esc(freeFlash)}</span>`:""}
   </section>
   <section class="card"><div class="row between"><h2>今日の半荘</h2><span class="note">${todays.length}半荘</span></div>
-    <div class="list">${todays.slice().reverse().map(freeItem).join("")||'<p class="note">まだ記録がありません。記録はセッションのタブにも入ります。</p>'}</div>
+    <div class="list">${todays.slice().reverse().map(freeItem).join("")||'<p class="note">まだ記録がありません。</p>'}</div>
+    <p class="note">半荘は「記録する」を押した時点で保存されます。今日の分はセッションのタブにも1日分として入るので、まとめて記録する操作はいりません。</p>
   </section>
   <section class="card"><details id="fRules" ${open?"open":""}><summary>ルールを変える</summary><div class="stack" style="margin-top:8px">
     ${ruleFields(r,"frule")}
     <span class="warn" id="fRuleErr"></span>
-    <div class="row"><input id="rName" placeholder="ルールの名前（例：いつもの三麻）" style="flex:1"><button class="small" id="rSave">このルールを保存</button></div>
+    <p class="note" id="fRuleMsg" role="status">入れた内容は、すぐ今のルールになります。前に記録した半荘の計算は変わりません。</p>
+    <button class="small" id="fRedo" style="display:none"></button>
+    <div class="row"><input id="rName" placeholder="ルールの名前（例：いつもの三麻）" value="${esc((db.rules.find(x=>x.id===f.ruleFrom)||{}).name||"")}" style="flex:1"><button class="small" id="rSave">このルールを保存</button></div>
   </div></details></section>
   <section class="card"><details class="howtobox" data-howto="quick" ${(db.settings.howClosed||{}).quick?"":"open"}><summary><h2>点数の早見表</h2></summary>
     <p class="note">いまのルールでの結果です。チップは入れず、ゲーム代は引いています。飛ばしたときのトビ賞は入っていません。「−」は起こらない組み合わせです。</p>
@@ -894,7 +904,7 @@ function bindFree(){
     document.getElementById("fErr").textContent=impossibleScore(sc,freeRank,r)?badMsg(sc):"";
   };
   const badMsg=sc=>`${freeRank}着で${sc.toLocaleString()}点は起こらない組み合わせです。点数か着順を確かめてください`;
-  const keepFree=()=>{resume.free={score:score.value,chip:chip.value,rank:freeRank,tobi:freeTobi}; keepResume();};
+  const keepFree=()=>{resume.free={score:score.value,unit:scoreUnit(r),chip:chip.value,rank:freeRank,tobi:freeTobi}; keepResume();};
   score.oninput=chip.oninput=()=>{paint(); keepFree();};
   document.querySelectorAll("[data-frank]").forEach(b=>b.onclick=()=>{freeRank=Number(b.dataset.frank);
     document.querySelectorAll("[data-frank]").forEach(c=>c.setAttribute("aria-pressed",c===b)); paint(); keepFree();});
@@ -910,13 +920,28 @@ function bindFree(){
   };
   document.getElementById("fRules").ontoggle=e=>{freeOpen=e.target.open;};
   document.querySelectorAll("[data-fmode]").forEach(b=>b.onclick=()=>{setFreeMode(r,Number(b.dataset.fmode));freeTobi=false;save();render();});
-  document.querySelectorAll("[data-rapply]").forEach(b=>b.onclick=()=>{Object.assign(r,ruleCopy(db.rules.find(x=>x.id===b.dataset.rapply).rule));if(freeRank>r.mode)freeRank=1;save();render();});
+  document.querySelectorAll("[data-rapply]").forEach(b=>b.onclick=()=>{Object.assign(r,ruleCopy(db.rules.find(x=>x.id===b.dataset.rapply).rule));f.ruleFrom=b.dataset.rapply;if(freeRank>r.mode)freeRank=1;save();render();});
+  // 今日の半荘のうち、今のルールと違うもの（同じ四麻か三麻だけ）
+  const oldToday=()=>f.games.filter(g=>g.date===today()&&g.rule.mode===r.mode&&ruleKey(g.rule)!==ruleKey(r));
+  const redo=document.getElementById("fRedo");
+  const showRedo=()=>{const n=oldToday().length; redo.style.display=n?"":"none"; redo.textContent=`今日の${n}半荘も今のルールで計算し直す`;};
+  redo.onclick=()=>{
+    const gs=oldToday(); if(!gs.length) return;
+    const todays=()=>f.games.filter(g=>g.date===today()), before=freeSummary(todays()).total;
+    const after=freeSummary(todays().map(g=>gs.includes(g)?{...g,rule:ruleCopy(r)}:g)).total;
+    if(!confirm(`今日の${gs.length}半荘を、今のルールで計算し直します。\n今日の合計は ${fmtP(before)} から ${fmtP(after)} になります。`)) return;
+    undoable("今日の半荘を計算し直しました",()=>{gs.forEach(g=>{g.rule=ruleCopy(r);});}); render();
+  };
   document.querySelectorAll("[data-frule]").forEach(i=>i.onchange=()=>{
     const msg=document.getElementById("fRuleErr"); msg.textContent=setRuleField(i,r,"frule");
     if(msg.textContent) return;
-    save(); paint();
+    save(); paint(); showRedo();
+    document.getElementById("fRuleMsg").textContent="今のルールを変えました。これから記録する半荘に使います。前に記録した半荘の計算は変わりません。";
   });
-  document.getElementById("rSave").onclick=()=>{const n=document.getElementById("rName").value.trim(); if(!n){document.getElementById("fRuleErr").textContent="ルールの名前を入れてください";return;} saveRule(n); render();};
+  const rName=document.getElementById("rName"), rSave=document.getElementById("rSave");
+  const saveLabel=()=>{rSave.textContent=db.rules.some(x=>x.name===rName.value.trim())?"上書きして保存":"このルールを保存";};
+  rName.oninput=saveLabel; saveLabel(); showRedo();
+  rSave.onclick=()=>{const n=rName.value.trim(); if(!n){document.getElementById("fRuleErr").textContent="ルールの名前を入れてください";return;} if(saveRule(n)){f.ruleFrom=db.rules.find(x=>x.name===n).id; save(); toast(`「${n}」を保存しました`);} render();};
   bindFreeRows(f);
   paint();
 }
@@ -930,7 +955,8 @@ function viewFreeDay(day){
   const gs=freeState().games.filter(g=>g.date===day);
   if(!gs.length){ openSession=null; freeEdit=null; return viewSessions(); }
   const x=freeSummary(gs);
-  const form=g=>`<div class="stack" id="eForm"><div class="seg">${Array.from({length:4},(_,k)=>`<button class="chip" data-erank="${k+1}" aria-pressed="${g.rank===k+1}">${k+1}着</button>`).join("")}</div>
+  const form=g=>`<div class="stack" id="eForm"><div class="seg" id="eRanks"></div>
+    <div id="eUnit">${unitNote(g.rule)}</div>
     <label class="f">点数${sfield('id="eScore"',String(g.score/scoreUnit(g.rule)))}</label>
     <label class="f">チップ${chipField('id="eChip"',g.chips||0)}</label>
     <button class="chip" id="eTobi" aria-pressed="${!!g.tobiWin}">飛ばした</button>
@@ -946,17 +972,32 @@ function bindFreeDay(){
   document.getElementById("back").onclick=()=>{openSession=null;freeEdit=null;render();window.scrollTo(0,0);};
   bindFreeRows(f);
   const g=f.games.find(x=>x.id===freeEdit); if(!g||!document.getElementById("eForm")) return;
-  let rank=g.rank, tobi=!!g.tobiWin;
-  document.querySelectorAll("[data-erank]").forEach(b=>b.onclick=()=>{rank=Number(b.dataset.erank);document.querySelectorAll("[data-erank]").forEach(c=>c.setAttribute("aria-pressed",c===b));});
-  const t=document.getElementById("eTobi"); t.onclick=()=>{tobi=!tobi;t.setAttribute("aria-pressed",tobi);};
+  let rank=g.rank, tobi=!!g.tobiWin, rule=g.rule;
+  const scoreEl=document.getElementById("eScore"), t=document.getElementById("eTobi");
+  // ルールに合わせて、着順のボタン・点数の単位の案内・飛ばしたボタンを出し直す
+  const shape=()=>{
+    if(rank>rule.mode) rank=1;
+    const box=document.getElementById("eRanks");
+    box.innerHTML=Array.from({length:rule.mode},(_,k)=>`<button class="chip" data-erank="${k+1}" aria-pressed="${rank===k+1}">${k+1}着</button>`).join("");
+    box.querySelectorAll("[data-erank]").forEach(b=>b.onclick=()=>{rank=Number(b.dataset.erank);box.querySelectorAll("[data-erank]").forEach(c=>c.setAttribute("aria-pressed",c===b));});
+    document.getElementById("eUnit").innerHTML=unitNote(rule);
+    t.style.display=rule.tobi?"":"none"; if(!rule.tobi){tobi=false;t.setAttribute("aria-pressed",false);}
+  };
+  t.onclick=()=>{tobi=!tobi;t.setAttribute("aria-pressed",tobi);};
+  document.getElementById("eRule").onchange=e=>{
+    const v=e.target.value, sc=parseScore(scoreEl.value,scoreUnit(rule));
+    rule=!v?g.rule:v==="m4"||v==="m3"?(m=>({...ruleCopy(g.rule),...JSON.parse(JSON.stringify(FREE_RULES[m])),chipRate:chipFor(m,g.rule.rate)}))(Number(v.slice(1))):ruleCopy(db.rules.find(r=>r.id===v).rule);
+    if(sc!==null) scoreEl.value=String(sc/scoreUnit(rule)); // 点数はそのままで、入れ方だけ新しいルールに合わせる
+    shape();
+  };
+  shape();
   document.getElementById("eNo").onclick=()=>{freeEdit=null;render();};
   document.getElementById("eOk").onclick=()=>{
-    const err=document.getElementById("eErr"), sc=parseScore(document.getElementById("eScore").value,scoreUnit(g.rule)), v=document.getElementById("eRule").value, date=document.getElementById("eDate").value;
-    const rule=!v?g.rule:v==="m4"||v==="m3"?{...ruleCopy(g.rule),...JSON.parse(JSON.stringify(FREE_RULES[v.slice(1)]))}:ruleCopy(db.rules.find(r=>r.id===v).rule);
+    const err=document.getElementById("eErr"), sc=parseScore(scoreEl.value,scoreUnit(rule)), date=document.getElementById("eDate").value;
     if(sc===null||!date){err.textContent="点数と日付を入れてください";return;}
-    if(rank>rule.mode){err.textContent=`このルールは${rule.mode}着までです`;return;}
+    if(impossibleScore(sc,rank,rule)&&!confirm(`${rank}着で${sc.toLocaleString()}点は起こらない組み合わせです。点数か着順を確かめてください\n\nこのまま直しますか？`)) return;
     freeEdit=null; openSession="free:"+date;
-    undoable("半荘を直しました",()=>{ Object.assign(g,{score:sc,rank,chips:parseSigned(document.getElementById("eChip").value)||0,tobiWin:tobi,date,rule}); });
+    undoable("半荘を直しました",()=>{ Object.assign(g,{score:sc,rank,chips:parseSigned(document.getElementById("eChip").value)||0,tobiWin:tobi&&!!rule.tobi,date,rule}); });
   };
 }
 
