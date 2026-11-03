@@ -322,9 +322,9 @@ function settleText(s,name){
   const lines=[`${m}/${d} 半荘ノート`,...s.members.slice().sort((a,b)=>t[b].yen-t[a].yen).map(id=>`${name(id)} ${t[id].yen===0?"±0P":(t[id].yen>0?"+":"−")+p(Math.abs(t[id].yen))}`)];
   lines.push(...settlePay(s,t).map(x=>`${name(x.from)} → ${name(x.to)} ${p(x.yen)}`));
   const payer=venuePayer(s,t), unit=settleUnit(s);
-  if(payer) lines.push(`※場代は${name(payer)}がまとめて店へ払います`);
+  if(payer) lines.push(`※場代${p(venueTotal(s,t))}は${name(payer)}がまとめて店へ払うので、各自の場代の分を足して渡します`);
   else if(s.members.some(id=>t[id].fee)) lines.push("※場代は収支から引いてあり、やり取りには入れていません");
-  if(unit>1) lines.push(`※やり取りは${unit}P単位です`);
+  if(unit>1) lines.push(`※やり取りは${unit}P単位で、端数は${name(roundHolder(s,t))}が受けます`);
   return lines.join("\n");
 }
 
@@ -335,12 +335,24 @@ function venuePayer(s,t=sessionTotals(s)){
   return s.members.includes(v.payer)?v.payer:s.members.reduce((a,b)=>t[b].yen>t[a].yen?b:a);
 }
 const settleUnit=s=>Number((s.venue||{}).unit??100);
-// セットのやり取り。店へ払う人がいれば場代の分も人の間で集める。収支の表は丸めず、渡す額だけ unit 単位に四捨五入する
+// 店へ払う総額。上の表の場代の列の合計と同じ
+const venueTotal=(s,t=sessionTotals(s))=>s.members.reduce((a,id)=>a+t[id].fee,0);
+// 丸めの端数を受ける人。店へ払う人がいればその人、いなければ一番勝った人
+const roundHolder=(s,t=sessionTotals(s))=>venuePayer(s,t)||s.members.reduce((a,b)=>t[b].net>t[a].net?b:a);
+// 一人ずつの受け渡しの合計を unit 単位に四捨五入する。全員の合計が変わらないように、端数は holder が受ける
+function roundBal(bal,unit,holder){
+  if(unit<=1) return bal;
+  const out={}, ids=Object.keys(bal), total=ids.reduce((a,id)=>a+bal[id],0);
+  ids.filter(id=>id!==holder).forEach(id=>{out[id]=Math.sign(bal[id])*Math.round(Math.abs(bal[id])/unit)*unit;});
+  out[holder]=total-Object.values(out).reduce((a,b)=>a+b,0);
+  return out;
+}
+// セットのやり取り。店へ払う人がいれば場代の分も人の間で集める。収支の表は丸めず、渡す額だけ人ごとの合計で丸める
 function settlePay(s,t=sessionTotals(s)){
-  const payer=venuePayer(s,t), unit=settleUnit(s), base=Number(s.rule.fee||0), bal={};
-  s.members.forEach(id=>{bal[id]=payer?t[id].net-(t[id].fee-base):t[id].net;});
-  if(payer) bal[payer]+=Number(s.venue.amount);
-  return settle(bal).map(x=>({...x,yen:unit>1?Math.round(x.yen/unit)*unit:x.yen})).filter(x=>x.yen>0);
+  const payer=venuePayer(s,t), bal={};
+  s.members.forEach(id=>{bal[id]=payer?t[id].yen:t[id].net;});
+  if(payer) bal[payer]+=venueTotal(s,t);
+  return settle(roundBal(bal,settleUnit(s),roundHolder(s,t)));
 }
 // 精算：払う回数が少なくなるように、一番負けた人から一番勝った人へ順に払う
 function settle(yenById){
@@ -447,4 +459,4 @@ function backupDue(d){
   return gameCount(d)-Math.max(Number(d.settings.backupGames||0),Number(d.settings.nudgeSkip||0)) >= every;
 }
 
-if(typeof module!=="undefined") module.exports={settlePay,venuePayer,settleUnit,basicFilter,mergeBackup,syncGameChips,startGameChips,stopGameChips,settleText,rankDist,outOf,nextOut,TRIAL_DAYS,canTrial,startTrial,swapPlayer,mergePlayer,parseUma,umaHelp,hasSample,clearSample,parseSigned,parseScore,freeResult,scoreGame,roundKeepTotal,extraGap,chipGap,sessionTotals,settle,filterSessions,playerStats,toCSV,RULE_PRESETS,verifyCode,isUnlocked,CODE_EPOCH,isBackup,gameCount,nextSnaps,unsavedGames,backupDue,ruleNote,tieGroups,venueShares,venueFlips,impossibleScore,scoreUnit,roundScore,playersByRecent,FREE_PLAYERS,canAddPlayer,GUESTS,ensureGuest,freeSummary,freeDays,filterFree,chipFor,quickTable,backupSummary,logEntries,logTotals,dayMap,monthGrid,shiftMonth};
+if(typeof module!=="undefined") module.exports={settlePay,venuePayer,settleUnit,venueTotal,roundHolder,basicFilter,mergeBackup,syncGameChips,startGameChips,stopGameChips,settleText,rankDist,outOf,nextOut,TRIAL_DAYS,canTrial,startTrial,swapPlayer,mergePlayer,parseUma,umaHelp,hasSample,clearSample,parseSigned,parseScore,freeResult,scoreGame,roundKeepTotal,extraGap,chipGap,sessionTotals,settle,filterSessions,playerStats,toCSV,RULE_PRESETS,verifyCode,isUnlocked,CODE_EPOCH,isBackup,gameCount,nextSnaps,unsavedGames,backupDue,ruleNote,tieGroups,venueShares,venueFlips,impossibleScore,scoreUnit,roundScore,playersByRecent,FREE_PLAYERS,canAddPlayer,GUESTS,ensureGuest,freeSummary,freeDays,filterFree,chipFor,quickTable,backupSummary,logEntries,logTotals,dayMap,monthGrid,shiftMonth};

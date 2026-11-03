@@ -14,18 +14,18 @@
 /* 層：上に条件バー → 数字 → グラフ → 一覧。下に固定のタブ。雀簿寄りのくすんだ緑と丸い角 */
 :root{
   --bg:#f3f4ee; --card:#fbfbf7; --fg:#26302a; --mute:#6c776f; --line:#dde2d6;
-  --accent:#4f6b55; --accent-weak:#e3ebe0; --plus:#2f6fb0; --minus:#c0443b; --gold:#b8892c;
+  --accent:#4f6b55; --accent-weak:#e3ebe0; --plus:#2f6fb0; --minus:#c0443b; --gold:#b8892c; --gold-weak:#f5ecd7;
   --r1:#4f6b55; --r2:#86a17c; --r3:#c9b77f; --r4:#c98a7a;
   --font:"Meiryo","メイリオ","Hiragino Maru Gothic ProN","Hiragino Sans",sans-serif;
   --radius:14px;
 }
 @media (prefers-color-scheme: dark){:root:not([data-theme="light"]){
   --bg:#181c19; --card:#212722; --fg:#e7ebe4; --mute:#9aa59c; --line:#3a443b;
-  --accent:#8fb293; --accent-weak:#2b362d; --plus:#7fb2e8; --minus:#ec8a80; --gold:#d9b25c;
+  --accent:#8fb293; --accent-weak:#2b362d; --plus:#7fb2e8; --minus:#ec8a80; --gold:#d9b25c; --gold-weak:#3a3122;
   --r1:#8fb293; --r2:#5f7d5f; --r3:#a99a63; --r4:#a8695b; color-scheme:dark}}
 :root[data-theme="dark"]{
   --bg:#181c19; --card:#212722; --fg:#e7ebe4; --mute:#9aa59c; --line:#3a443b;
-  --accent:#8fb293; --accent-weak:#2b362d; --plus:#7fb2e8; --minus:#ec8a80; --gold:#d9b25c;
+  --accent:#8fb293; --accent-weak:#2b362d; --plus:#7fb2e8; --minus:#ec8a80; --gold:#d9b25c; --gold-weak:#3a3122;
   --r1:#8fb293; --r2:#5f7d5f; --r3:#a99a63; --r4:#a8695b; color-scheme:dark}
 *{box-sizing:border-box}
 [hidden]{display:none!important}
@@ -50,6 +50,8 @@ h3{font-size:14px;margin:0;color:var(--mute);font-weight:normal}
 button,.btn{font:inherit;border:1px solid var(--line);background:var(--card);color:var(--fg);border-radius:999px;padding:7px 14px;cursor:pointer}
 button.primary{background:#4f6b55;color:#fff;border-color:#4f6b55}
 button.wide{width:100%;min-height:48px;font-weight:bold}
+button.finish{background:#8f6a1e;color:#fff;border-color:#8f6a1e}
+button.danger{background:#b23b33;color:#fff;border-color:#b23b33}
 button.ghost{background:transparent}
 button.small{padding:3px 10px;font-size:13px}
 button:focus-visible,input:focus-visible,select:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
@@ -75,6 +77,7 @@ nav.tabs button{white-space:nowrap;overflow:hidden}
 .totalrow td{font-weight:700;border-top:2px solid var(--line)}
 .unitnote{background:var(--accent-weak);border-radius:10px;padding:8px 12px;font-size:14px;margin:0}
 .unitnote b{color:var(--accent)}
+.unitnote.sanma{background:var(--gold-weak)}.unitnote.sanma b{color:var(--gold)}
 .rulebox{background:var(--accent-weak);border-radius:10px;padding:8px 12px;font-size:14px}
 .rulebox b{color:var(--accent)}
 .tag.set{background:transparent;border:1px solid var(--line);color:var(--mute)}
@@ -224,11 +227,11 @@ const sfield=(attrs,val="")=>`<span class="sfield"><button type="button" class="
 // 画面の頭の使い方。閉じたらその画面は閉じたままにする
 const chipField=(attrs,val="")=>`<span class="chipf">${sfield(attrs,val)}<span class="steps">${[-5,-1,1,5].map(n=>`<button type="button" data-step="${n}" aria-label="${n>0?"+":"−"}${Math.abs(n)}枚">${n>0?"+":"−"}${Math.abs(n)}</button>`).join("")}</span></span>`;
 const HOW={
-  sessions:["「＋ セットを記録」か「＋ フリーを記録」を押す","行を押すと開いて、直したり消したりできる","一覧とカレンダーを切り替えて見る（細かい集計は成績のタブ）"],
-  set:["「＋ 新しく始める」でルールとメンバーを選ぶ","半荘ごとに点数を入れて「記録する」","終わったらチップと場代を入れて「このセッションを記録する」"],
+  sessions:["「＋ セットを記録」か「＋ フリーを記録」を押す","行を押すと開いて、直したり消したりできる","一覧とカレンダーを切り替えて見る（細かい集計は成績のタブで行う）"],
+  set:["「＋ 新しく始める」でルールとメンバーを選ぶ","半荘ごとに点数を入れて「この半荘を記録する」を押す","終わったらチップと場代を入れて「このセッションを記録する」を押す"],
   free:["四麻か三麻を選ぶ（ルールは最初に一度決めるだけ）","着順を押して、点数を入れる","「記録する」で今日の合計が出る"],
-  players:["ルールを選んで「セットで使う」か「フリーで使う」を押す。ないルールは「ルールを作る」で作れる","一緒に打つ人を「メンバーを追加」で入れる","自分の行の「自分」を押すと、集計の対象になる"],
-  stats:["期間やレート、メンバーなどを選ぶ（何も選ばなければ全部）","下の表とグラフが選んだ条件で変わる","フリーの成績は上、セットの成績はその下に出る"],
+  players:["ルールを選んで「セットで使う」か「フリーで使う」を押す。ないルールは「ルールを作る」で作れる","一緒に打つ人を「メンバーを追加」で入れる","自分の行の「自分」を押すと、その人の収支がセッションの合計と成績に入る"],
+  stats:["期間やレート、メンバーなどを選ぶ（何も選ばなければ全部の記録を集計する）","下の表とグラフが選んだ条件で変わる","フリーの成績は上、セットの成績はその下に出る"],
 };
 const howBox=k=>`<details class="howtobox" data-howto="${k}" ${(db.settings.howClosed||{})[k]?"":"open"}><summary>【使い方】</summary><ol class="note howto">${HOW[k].map(x=>`<li>${x}</li>`).join("")}</ol></details>`;
 view.addEventListener("toggle",e=>{ const k=e.target.dataset&&e.target.dataset.howto; if(!k) return; const c=db.settings.howClosed=db.settings.howClosed||{}; if(!!c[k]===!e.target.open) return; c[k]=!e.target.open; save(); },true);
@@ -265,11 +268,11 @@ let undo=null, undoTimer=null;
 // スマホのブラウザのまま記録したときに1回だけ伝える。ホーム画面のアプリとは記録が分かれることがある
 const inBrowser=()=>/iPhone|iPad|Android/.test(navigator.userAgent)&&!navigator.standalone&&!matchMedia("(display-mode: standalone)").matches;
 let browserWarned=false;
-function warnBrowser(){ if(browserWarned||!inBrowser()) return; browserWarned=true; toast("ブラウザのままです。記録が消えやすいので、ホーム画面に追加して使ってください"); }
+function warnBrowser(){ if(browserWarned||!inBrowser()) return; browserWarned=true; toast("ブラウザで開いています。記録が消えやすいので、ホーム画面に追加して使ってください"); }
 function toast(msg){ const old=document.getElementById("toast"); if(old) old.remove(); const t=document.createElement("div"); t.className="undobar"; t.id="toast"; t.style.minHeight="48px"; t.textContent=msg; document.body.appendChild(t); setTimeout(()=>t.remove(),5000); }
 // 初めて消すときだけ、確認は設定で消せると伝える
 function askDel(msg){ if(db.settings.delAsk===false) return true;
-  const hint=db.settings.delHintDone?"":"\n\nこの確認は、設定の「入力」で出さないようにできます。";
+  const hint=db.settings.delHintDone?"":"\n\nこの確認は、設定の「消すときの確認」で出さないようにできます。";
   const yes=confirm(msg+hint); if(hint){db.settings.delHintDone=true;save();} return yes; }
 function undoable(label,fn){
   const before=JSON.stringify(db);
@@ -282,8 +285,8 @@ function undoable(label,fn){
 const TOUR=[
   ["set","セット","友達と打つ日はここ。ルールとメンバーを選んで、半荘ごとに点数を入れます。"],
   ["free","フリー","お店で打つ日はここ。着順と自分の点数を入れるだけです。"],
-  ["players","ルール/メンバ","ルールと一緒に打つ人を決めます。「自分」を選ぶと、成績に入ります。"],
-  ["stats","成績","期間や四麻・三麻で絞って見られます。レートやメンバーの組み合わせは拡張機能です。"],
+  ["players","ルール/メンバ","ルールと、一緒に打つ人を登録します。自分の行の「自分」を押すと、自分の収支が成績に入ります。"],
+  ["stats","成績","成績を、期間や四麻・三麻で絞って見られます。レートやメンバーで絞るのは拡張機能です。"],
   ["settings","設定","困ったときは、設定の「使い方」を見てください。"],
 ];
 let tourAt=-1;
@@ -316,7 +319,7 @@ function render(){
   charts.forEach(c=>c.destroy()); charts=[];
   document.querySelectorAll("nav.tabs button").forEach(b=>b.setAttribute("aria-current",b.dataset.tab===tab));
   const banner = hasSample(db) ? `<div class="sample"><span>いま入っているのは見本のデータです</span><button class="small" id="clearSample">見本を消して始める</button></div>`:"";
-  const notice = db.settings.noticeDone ? "" : `<div class="sample"><span>記録はこの端末の中だけに残ります。同じ端末でも、別のブラウザでは記録を見られません。ホーム画面のアイコンと Safari でも分かれることがあります。iPhone はホーム画面に追加して、アイコンから使ってください。機種変更やブラウザのデータ削除で消えるので、残したいときはバックアップ（拡張機能）を使ってください。使い方は設定にあります。</span><button class="small" id="noticeOk">わかった</button></div>`;
+  const notice = db.settings.noticeDone ? "" : `<div class="sample"><span>記録はこの端末の中だけに残ります。同じ端末でも、別のブラウザでは記録を見られません。記録は、ホーム画面のアイコンから開いたときと Safari で開いたときでも分かれることがあります。iPhone はホーム画面に追加して、アイコンから使ってください。機種変更やブラウザのデータ削除で消えるので、残したいときはバックアップ（拡張機能）を使ってください。使い方は設定にあります。</span><button class="small" id="noticeOk">わかった</button></div>`;
   const broken = saveBroken ? `<p class="warn">記録を保存できませんでした。端末の空き容量を確かめてください。</p>`:"";
   const due = unlocked() && (tab==="stats"||(tab==="sessions"&&!openSession)) && backupDue(db) ? `<div class="sample"><span>ファイルに保存していない記録が ${unsavedGames(db)}半荘あります</span><span class="row"><button class="small ghost" id="bkLater">あとで</button><button class="small" id="bkDue">保存する</button></span><span id="bkMsg" style="flex-basis:100%"></span></div>`:"";
   const until=db.settings.unlockUntil, left=until?Math.ceil((until-Date.now())/864e5):0;
@@ -350,7 +353,7 @@ const PICK_SHOW=6, fOpen={};
 const statModes=sel=>[...new Set(sel.map(s=>s.rule.mode))].sort((a,b)=>b-a);
 const modeName=m=>m===3?"三麻":"四麻";
 const rateName=r=>`レート${Number(r)/100}`;
-const FILTER_LOCK="組み合わせの集計は拡張機能です。設定で30日試せます";
+const FILTER_LOCK="レート・場所・メンバーで絞る集計は拡張機能です。設定のタブで30日試せます";
 const statSel=()=>filter.kind==="free"?[]:filterSessions(db.sessions,filter);
 const freeSel=()=>filter.kind==="set"?[]:filterFree(freeState().games,filter);
 function freeStatsCard(){
@@ -402,7 +405,7 @@ function viewStats(){
   if(!unlocked()) filter=basicFilter(filter);
   const lock=unlocked()?"":'<span class="lock">拡張</span>';
   const chipRow=(arr,key,label)=>arr.map(v=>`<button class="chip" data-f="${key}" data-v="${esc(v.v)}" aria-pressed="${v.on}">${esc(v.l)}</button>`).join("");
-  const pickList = db.sessions.slice().sort((a,b)=>b.date.localeCompare(a.date)).map(s=>`<label class="row" style="gap:6px"><input type="checkbox" data-pick="${s.id}" ${filter.pick.includes(s.id)?"checked":""}> <span class="num">${s.date}</span> ${esc(s.title||(s.tags||[]).join(" "))} <span class="note">${s.rule.mode}人・${s.rule.rate}P</span></label>`).join("");
+  const pickList = db.sessions.slice().sort((a,b)=>b.date.localeCompare(a.date)).map(s=>`<label class="row" style="gap:6px"><input type="checkbox" data-pick="${s.id}" ${filter.pick.includes(s.id)?"checked":""}> <span class="num">${s.date}</span> ${esc(s.title||(s.tags||[]).join(" "))} <span class="note">${modeName(s.rule.mode)}・${rateName(s.rule.rate)}</span></label>`).join("");
   // 候補が少ないうちは並べ、多くなったら閉じた欄に入れる。何も選ばなければ全部を集計する
   const pickRow=(label,arr,key)=>{ if(!arr.length) return ""; const on=arr.filter(v=>v.on).length, chips=chipRow([{v:"",l:"すべて",on:!on},...arr],key);
     return arr.length<=PICK_SHOW?`<div class="row"><span class="note">${label}${key==="mode"?"":lock}</span>${chips}</div>`
@@ -423,7 +426,7 @@ function viewStats(){
       <div class="row"><button class="small ghost" id="freset">条件を外す</button><button class="small" id="fsave">この条件を保存${unlocked()?"":'<span class="lock">拡張</span>'}</button></div>
     </div>
     <div id="saveBox" hidden class="row"><input id="saveName" placeholder="例：三麻・今年"><button class="small primary" id="saveOk">保存</button></div>
-    <div id="saveLock" hidden class="row"><span class="note">条件の保存は拡張機能です。設定タブで解放コードを入れると使えます。</span><button class="small" id="toSettings">設定へ</button></div>
+    <div id="saveLock" hidden class="row"><span class="note">条件の保存は拡張機能です。設定のタブで解放コードを入れると使えます。</span><button class="small" id="toSettings">設定へ</button></div>
   </section>
   ${freeStatsCard()}
   ${ids.length? `
@@ -433,7 +436,7 @@ function viewStats(){
       <thead><tr><th>名前</th><th>収支</th><th>ポイント</th><th>半荘</th></tr></thead>
       <tbody>${ids.map(id=>{const p=st[id];return `<tr><td><span class="dot" style="background:${P(id).color}"></span>${esc(P(id).name)}</td><td class="${cls(p.yen)}">${fmtP(p.yen)}</td><td class="${cls(p.point)}">${fmtPt(p.point)}</td><td>${p.games}</td></tr>`}).join("")}</tbody>
     </table></div>
-    <p class="note">収支＝ポイント×千点あたり＋チップ×1枚あたり＋その他の項目−場代。同点はウマ・オカを分けず、記録のときに選んだ人を上にします（分け合う形を選んだセットを除く）。</p>
+    <p class="note">収支＝ポイント×千点あたり＋チップ×1枚あたり＋その他の項目−場代。同点のときはウマ・オカを分けず、記録のときに選んだ人を上位にします（分け合う形を選んだセットを除く）。</p>
     <button class="small" id="sumImg">1枚の画像にまとめる${unlocked()?"":'<span class="lock">拡張</span>'}</button>
     <div class="stack" id="sumBox" hidden><img id="sumPrev" alt="成績をまとめた画像" style="width:100%;border:1px solid var(--line);border-radius:10px"><button class="small primary" id="sumSave">画像を保存・共有</button></div>
   </section>
@@ -511,7 +514,7 @@ function viewSessions(){
     ${seg("kind",[["all","すべて"],["free","フリー"],["set","セット"]],logKind)}
     ${seg("lview",[["list","一覧"],["calendar","カレンダー"]],cal?"calendar":"list")}
     <div class="row between"><span class="note">${sum.count}回・${sum.games}半荘</span><b class="free-sum ${cls(sum.total)}">${fmtP(sum.total)}</b></div>
-    ${db.sessions.length?`<div class="row between"><span class="note">${db.settings.me?`集計の対象：<b>${esc(P(db.settings.me).name)}さん</b>。変えるときは「ルール/メンバ」のタブへ移動します。`:`集計の対象がまだ決まっていません。「ルール/メンバ」のタブへ移動して、自分を選びます。`}</span><button class="small" id="toMe">${db.settings.me?"変える":"移動する"}</button></div>`:""}
+    ${db.sessions.length?`<div class="row between"><span class="note">${db.settings.me?`合計に入れる人：<b>${esc(P(db.settings.me).name)}さん</b>。変えるときは「ルール/メンバ」のタブへ移動します。`:`合計に入れる人がまだ決まっていません。「ルール/メンバ」のタブで、自分の行の「自分」を押してください。`}</span><button class="small" id="toMe">${db.settings.me?"変える":"移動する"}</button></div>`:""}
     ${sum.unknown&&db.settings.me?`<p class="note">${esc(P(db.settings.me).name)}さんが入っていないセット ${sum.unknown}回は、合計に入っていません。</p>`:""}
   </section>
   ${cal?calendarHTML(es):listHTML(es)}`;
@@ -559,7 +562,7 @@ function viewSet(){
     ${recent.length?`<h3>前の回を続ける</h3><div class="list">${recent.map(entryRow).join("")}</div>`:'<p class="note">まだ記録がありません。「新しく始める」から入れてください。</p>'}</section>`;
 }
 const MEM_SHOW=8;
-const unitNote=r=>r.mode===4?`<p class="unitnote"><b>四麻は100点単位</b>：300 で 30000点、325 で 32500点。三麻と入れ方が違います。箱下は「−」を押します。</p>`:`<p class="unitnote"><b>三麻は千点単位</b>：30 で 30000点、32.5 で 32500点。箱下は「−」を押します。</p>`;
+const unitNote=r=>r.mode===4?`<p class="unitnote"><b>四麻は100点単位</b>：300 で 30000点、325 で 32500点。三麻と入れ方が違います。箱下は「−」を押します。</p>`:`<p class="unitnote sanma"><b>三麻は千点単位</b>：30 で 30000点、32.5 で 32500点。箱下は「−」を押します。</p>`;
 const presetOf=v=>{ if(v.startsWith("r:")){const x=db.rules.find(r=>r.id===v.slice(2)); return {label:x.name,tie:"seat",...x.rule};} return RULE_PRESETS[v]; };
 function newBoxHTML(){
   const last=db.settings.lastMembers||[], ps=playersByRecent(db).filter(p=>!p.guest);
@@ -572,7 +575,7 @@ function newBoxHTML(){
   <input type="hidden" id="nFee" value="0">
   <details><summary>持ち点・ウマを変える</summary><div class="stack" style="margin-top:8px"><div class="grid3"><label class="f">持ち点<input type="number" id="nStart"></label><label class="f">返し<input type="number" id="nRet"></label><label class="f">ウマ<input id="nUma"></label></div>
   <p class="note">ウマは 5-10 でも 5,10 でも入れられます。三麻は 20 で 20,0,-20 です。</p>
-  <label class="f">同点のとき<select id="nTie"><option value="seat">上の人を選ぶ（起家に近い人）</option><option value="split">ウマ・オカを分け合う</option></select></label>
+  <label class="f">同点のとき<select id="nTie"><option value="seat">記録のときに上位の人を選ぶ（起家に近い人）</option><option value="split">ウマ・オカを分け合う</option></select></label>
   <label class="f">千点未満の端数<select id="nRound">${roundOpts("")}</select></label>
   <label class="f" id="nDoubleBox">ダブル飛ばし<select id="nDouble">${doubleOpts("")}</select></label></div></details>
   <div><span class="note">メンバー（四麻は4人、三麻は3人。4人で回す三麻は4人を選ぶ）</span><div class="row" id="nMem">${ps.slice(0,MEM_SHOW).map(memChip).join("")||'<span class="note">先にルール/メンバのタブでメンバーを追加してください</span>'}</div>
@@ -606,7 +609,7 @@ function bindSet(){
   };
 }
 let editGame=null;
-const DOUBLES=[["","全員払う（もらうのも人数分）"],["half","1人分を飛んだ人で分ける"],["low","1人分を一番低い人が払う"]];
+const DOUBLES=[["","飛んだ人が全員払う（飛ばした人は人数分もらう）"],["half","1人分を飛んだ人で分ける"],["low","1人分を一番低い人が払う"]];
 const doubleOpts=now=>DOUBLES.map(([v,l])=>`<option value="${v}" ${(now||"")===v?"selected":""}>${l}</option>`).join("");
 // 選び間違いやゲストの置き換え。点数はそのまま引き継ぐ
 function swapHTML(s){
@@ -635,9 +638,9 @@ function viewSession(s){
       ${s.members.length>s.rule.mode?`<div id="sOut"><span class="note">この半荘で抜ける人</span><div class="row">${s.members.map(id=>`<button class="chip" data-out="${id}">${esc(P(id).name)}</button>`).join("")}</div></div>`:""}
       <div class="grid2">${s.members.map(id=>{ const f=sfield(`data-sc="${id}" placeholder="${s.rule.direct?"30":s.rule.mode===4?"320":"32"}"`,editGame===null?(resume.sc[s.id]||{})[id]??"":s.games[editGame].scores[id]===undefined?"":String(s.games[editGame].scores[id]/scoreUnit(s.rule))), by=editGame===null?(resume.sc[s.id]||{})._tobi:s.games[editGame].tobiBy;
         return s.rule.tobi&&!s.rule.direct?`<div class="f"><span class="row between" style="flex-wrap:nowrap">${esc(P(id).name)}<button class="chip tiny" data-tb="${id}" aria-pressed="${by===id}" aria-label="${esc(P(id).name)}が飛ばした">飛ばした</button></span>${f}</div>`:`<label class="f">${esc(P(id).name)}${f}</label>`; }).join("")}</div>
-      <button class="small ghost" id="auto">最後の1人を自動で埋める</button>
+      <button class="small ghost" id="auto">残り1人の点数を自動で出す</button>
       ${s.chipByGame?`<h3>この半荘のチップ</h3><div class="stack">${s.members.map(id=>`<label class="f">${esc(P(id).name)}${chipField(`data-gc="${id}" placeholder="0"`,editGame===null?((resume.sc[s.id]||{})._gc||{})[id]??"":(s.games[editGame].chips||{})[id]??"")}</label>`).join("")}</div>`:""}
-      <button class="primary wide" id="addG">${editGame===null?"記録する":"この半荘を直す"}</button>
+      <button class="primary wide" id="addG">${editGame===null?"この半荘を記録する":"この半荘を直す"}</button>
       ${editGame===null?"":'<button class="small ghost" id="editNo">やめる</button>'}<span class="warn" id="gErr"></span><div class="stack" id="tieBox" hidden></div>
     </div>
   </section>
@@ -651,23 +654,23 @@ function viewSession(s){
   ${extrasCard(s)}
   <section class="card"><h2>精算</h2>
     <label class="f">場代（全員の合計・P）<input inputmode="numeric" id="sVenue" placeholder="0" value="${s.venue&&s.venue.amount||""}"></label>
-    ${s.venue&&s.venue.amount?seg("vhow",[["equal","割り勘"],["win","勝ち額で"],["top","トップ"]],s.venue.how||"equal"):""}
+    ${s.venue&&s.venue.amount?seg("vhow",[["equal","割り勘"],["win","勝ち額で"],["top","トップが払う"]],s.venue.how||"equal"):""}
     ${s.venue&&s.venue.amount?`<div><span class="note">店へまとめて払う人</span><div class="row">${[...s.members.map(id=>[id,esc(P(id).name)]),["each","各自"]].map(([v,l])=>`<button class="chip" data-vpay="${v}" aria-pressed="${(payer||"each")===v}">${l}</button>`).join("")}</div></div>`:""}
     ${s.venue&&s.venue.amount&&venueFlips(t)?`<p class="warn">${s.venue.how==="top"?"トップが払うと収支の順番が入れ替わります。「勝ち額で」なら、順番は変わりません。":"場代を引くと収支の順番が入れ替わります。分け方を確かめてください。"}</p>`:""}
-    <div class="tablebox"><table><thead><tr><th>名前</th><th>ポイント</th><th>チップ</th>${hasExtra?"<th>その他</th>":""}<th>場代</th><th>収支</th></tr></thead><tbody>
+    <div class="tablebox"><table><thead><tr><th>名前</th><th>ポイント</th><th>チップ</th>${hasExtra?"<th>その他</th>":""}<th>場代・ゲーム代</th><th>収支</th></tr></thead><tbody>
     ${s.members.map(id=>`<tr><td><span class="dot" style="background:${P(id).color}"></span>${esc(P(id).name)}</td><td class="${cls(t[id].point)}">${fmtPt(t[id].point)}</td><td>${t[id].chips}</td>${hasExtra?`<td class="${cls(t[id].extra)}">${t[id].extra.toLocaleString()}</td>`:""}<td>${t[id].fee}</td><td class="${cls(t[id].yen)}"><b>${fmtP(t[id].yen)}</b></td></tr>`).join("")}
     </tbody></table></div>
     ${s.games.length?`<h3>着順の回数</h3><div class="tablebox"><table id="sRanks"><thead><tr><th>名前</th>${Array.from({length:s.rule.mode},(_,k)=>`<th>${k+1}着</th>`).join("")}<th>半荘</th></tr></thead><tbody>${s.members.map(id=>`<tr><td>${esc(P(id).name)}</td>${rankDist(t[id].spans,s.rule.mode).map(x=>`<td>${round1(x)}</td>`).join("")}<td>${t[id].games}</td></tr>`).join("")}</tbody></table></div>`:""}
     <div class="list">${pay.map(x=>`<div class="item" style="cursor:default"><span>${esc(P(x.from).name)} → ${esc(P(x.to).name)}</span><b class="num">${x.yen.toLocaleString()}P</b></div>`).join("")||'<span class="note">まだ精算はありません</span>'}</div>
     <div><span class="note">渡す額の丸め</span>${seg("vunit",[[1,"そのまま"],[10,"10P"],[100,"100P"]],unit)}</div>
-    ${payer?`<p class="note">${esc(P(payer).name)}が場代をまとめて店へ払う形で計算しています。</p>`:fee||(s.venue&&s.venue.amount)?`<p class="note">場代は各自が店へ払う形なので、人の間の精算には入れず、収支からだけ引いています。</p>`:""}
-    ${unit>1?`<p class="note">渡す額は${unit}P単位に四捨五入しています。上の表の収支はそのままです。</p>`:""}
+    ${payer?`<p class="note"><b>${esc(P(payer).name)}が場代 ${venueTotal(s,t).toLocaleString()}Pをまとめて店へ払います。</b>そのため、他の人は自分の場代の分を足して渡します。${esc(P(payer).name)}は、人とのやり取り ${fmtP(pay.reduce((a,x)=>a+(x.to===payer?x.yen:x.from===payer?-x.yen:0),0))}、店へ −${venueTotal(s,t).toLocaleString()}P です。</p>`:fee||(s.venue&&s.venue.amount)?`<p class="note">場代は各自が店へ払う形なので、人の間の精算には入れず、収支からだけ引いています。</p>`:""}
+    ${unit>1?`<p class="note">渡す額は一人ずつの合計を${unit}P単位に四捨五入し、端数は${esc(P(roundHolder(s,t)).name)}が受けます。上の表の収支はそのままです。</p>`:""}
     ${gap?`<p class="warn">やり取りの合計が ${gap.toLocaleString()}Pずれています。チップやその他の項目の回数を確かめてください。</p>`:""}
     ${s.games.length?`<button class="wide" id="sShare">精算を共有（LINE など）</button><textarea id="shareBox" readonly hidden rows="8"></textarea>`:""}
-    ${editGame===null?`<button class="primary wide" id="sDone">このセッションを記録する</button>`:""}
+    ${editGame===null?`<button class="primary wide finish" id="sDone">このセッションを記録する</button>`:""}
     <details><summary>日付・場所・ルールを直す</summary><div class="stack" style="margin-top:8px">
       <div class="grid2"><label class="f">日付<input type="date" id="sDate" value="${s.date}"></label><label class="f">場所<input id="sTags" value="${esc((s.tags||[]).join(" "))}"></label></div>
-      ${s.title?`<label class="f">名前（前に入れた分）<input id="sTitle" value="${esc(s.title)}"></label>`:`<input type="hidden" id="sTitle" value="">`}
+      ${s.title?`<label class="f">この回の名前<input id="sTitle" value="${esc(s.title)}"></label>`:`<input type="hidden" id="sTitle" value="">`}
       <div class="grid3"><label class="f">千点あたり（P）<input inputmode="decimal" id="sRate" value="${s.rule.rate}"></label><label class="f">チップ1枚（P）<input inputmode="decimal" id="sChipR" value="${s.rule.chipRate}"></label><label class="f">ゲーム代（P）<input inputmode="decimal" id="sFee" value="${s.rule.fee||0}"></label></div>
       <div class="grid3"><label class="f">持ち点<input inputmode="numeric" id="sStart" value="${s.rule.start}"></label><label class="f">返し<input inputmode="numeric" id="sRet" value="${s.rule.ret}"></label><label class="f">ウマ<input id="sUma" value="${s.rule.uma.join(",")}"></label></div>
       <label class="f">千点未満の端数<select id="sRound">${roundOpts(s.rule.round)}</select></label>
@@ -675,7 +678,7 @@ function viewSession(s){
       <button class="small primary" id="sSave">直す</button><span class="warn" id="sErr"></span>
       ${swapHTML(s)}
     </div></details>
-    <div class="row"><button class="small ghost" id="delS">このセッションを消す</button><span id="delConfirm" hidden><button class="small" id="delYes">本当に消す</button></span></div>
+    <div class="row"><button class="small ghost" id="delS">このセッションを消す</button><span id="delConfirm" hidden><button class="small danger" id="delYes">本当に消す</button></span></div>
   </section>`;
 }
 function extrasCard(s){
@@ -694,7 +697,7 @@ function bindExtras(s){
   const add=document.getElementById("xAdd"); if(!add) return;
   add.onclick=()=>{
     const name=document.getElementById("xName").value.trim(), price=Number(document.getElementById("xPrice").value);
-    if(!name||!price){document.getElementById("xErr").textContent="名前と数を入れてください";return;}
+    if(!name||!price){document.getElementById("xErr").textContent="項目の名前と、1回あたりの P を入れてください";return;}
     s.extras=s.extras||[]; s.extras.push({id:uid(),name,price,counts:{}}); db.sample=false; save(); render();
   };
   document.querySelectorAll("[data-xp]").forEach(i=>{const x=s.extras.find(v=>v.id===i.dataset.xid);
@@ -755,7 +758,7 @@ function bindSession(){
     const ask=(left,rest)=>{
       if(left.length===1){ order.push(left[0]); if(!rest.length) return finish(order); return ask(rest[0],rest.slice(1)); }
       box.hidden=false;
-      box.innerHTML=`<p class="unitnote"><b>同点です</b>：上の人を押してください（起家に近い人）</p><div class="row">${left.map(id=>`<button class="chip" data-tie="${id}">${esc(P(id).name)}</button>`).join("")}</div>`;
+      box.innerHTML=`<p class="unitnote"><b>同点です</b>：上位にする人を押してください（起家に近い人）</p><div class="row">${left.map(id=>`<button class="chip" data-tie="${id}">${esc(P(id).name)}</button>`).join("")}</div>`;
       box.querySelectorAll("[data-tie]").forEach(b=>b.onclick=()=>{order.push(b.dataset.tie); ask(left.filter(id=>id!==b.dataset.tie),rest);});
       box.scrollIntoView({block:"center"});
     };
@@ -775,7 +778,7 @@ function bindSession(){
     catch(e){ const b=document.getElementById("shareBox"); b.value=text; b.hidden=false; b.focus(); b.select(); toast("文を長押ししてコピーしてください"); }
   };
   const done=document.getElementById("sDone"); if(done) done.onclick=()=>{
-    if(live().some(i=>i.value.trim()!=="")){document.getElementById("gErr").textContent="入れかけの点数があります。先に「記録する」を押すか、消してください";document.getElementById("gErr").scrollIntoView({block:"center"});return;}
+    if(live().some(i=>i.value.trim()!=="")){document.getElementById("gErr").textContent="入れかけの点数があります。先に「この半荘を記録する」を押すか、消してください";document.getElementById("gErr").scrollIntoView({block:"center"});return;}
     s.done=s.games.length; save(); openSession=null; tab="sessions"; render(); window.scrollTo(0,0); toast("記録しました"); };
   document.getElementById("sVenue").onchange=e=>{const n=parseSigned(e.target.value)||0; s.venue={...s.venue,amount:Math.max(n,0)}; save(); render();};
   document.querySelectorAll("[data-vhow]").forEach(b=>b.onclick=()=>{s.venue={...s.venue,how:b.dataset.vhow}; save(); render();});
@@ -931,7 +934,7 @@ function viewFreeDay(day){
     <label class="f">点数${sfield('id="eScore"',String(g.score/scoreUnit(g.rule)))}</label>
     <label class="f">チップ${chipField('id="eChip"',g.chips||0)}</label>
     <button class="chip" id="eTobi" aria-pressed="${!!g.tobiWin}">飛ばした</button>
-    <div class="grid2"><label class="f">日付<input type="date" id="eDate" value="${g.date}"></label><label class="f">ルール<select id="eRule"><option value="">いまのまま</option>${db.rules.map(r=>`<option value="${r.id}">${esc(r.name)}</option>`).join("")}<option value="m4">標準の四麻</option><option value="m3">標準の三麻</option></select></label></div>
+    <div class="grid2"><label class="f">日付<input type="date" id="eDate" value="${g.date}"></label><label class="f">ルール<select id="eRule"><option value="">いまのまま</option>${db.rules.map(r=>`<option value="${r.id}">${esc(r.name)}</option>`).join("")}<option value="m4">既定の四麻</option><option value="m3">既定の三麻</option></select></label></div>
     <button class="primary wide" id="eOk">この半荘を直す</button><div class="row"><button class="small ghost" id="eNo">やめる</button><span class="warn" id="eErr"></span></div></div>`;
   return `<section class="card"><div class="row between"><button class="small ghost" id="back">← 戻る</button><span class="tag free">フリー</span></div>
     <div class="row between"><h2 class="num">${day}</h2><b class="${cls(x.total)}">${fmtP(x.total)}</b></div>
@@ -983,11 +986,11 @@ function viewPlayers(){
   ${ruleMakeHTML()}
   <h3>よくあるルール</h3>
   <div class="list">${["m4f","m4g","m3f"].map(k=>{const r=RULE_PRESETS[k];return `<div class="stack item" style="cursor:default;display:grid"><div><b>${r.label}</b><br><span class="meta">${r.note}<br>${ruleNote(r)}</span></div><div class="row"><button class="small" data-suse="${k}">セットで使う</button><button class="small" data-puse="${k}">フリーで使う</button><button class="small ghost" data-pmake="${k}">これを元に作る</button></div></div>`;}).join("")}</div>
-  <details><summary>言葉の説明</summary><p class="note">持ち点：最初に持つ点数。返し：計算の基準になる点数。ウマ：着順で増減する分。オカ：持ち点と返しの差の合計で、1着がもらう分。トビ賞：0点以下で払う分。五捨六入：百の位が5までは切り捨て、6からは切り上げ。合計のずれは1着が受けます。レート：千点あたりのPで、0.5は50P、1は100P。</p></details>
+  <details><summary>言葉の説明</summary><p class="note">持ち点：最初に持つ点数。返し：計算の基準になる点数。ウマ：着順で増減する分。オカ：持ち点と返しの差の合計で、1着がもらう分。トビ賞：0点以下になった人が払う分。五捨六入：百の位が5までは切り捨て、6からは切り上げ。丸めで出た合計のずれは1着が受けます。レート：千点あたりのPで、0.5は50P、1は100P。</p></details>
   </section>
   <section class="card"><h2 id="memH">メンバー</h2>
   <div class="list">${db.players.filter(p=>!p.guest).map(p=>editP===p.id?`<div class="stack item" style="cursor:default;display:grid"><div class="row"><input id="pEName" value="${esc(p.name)}" aria-label="名前" style="flex:1"><button class="small primary" id="pESave">保存</button><button class="small ghost" id="pENo">やめる</button></div><div class="row">${COLORS.map(c=>`<button class="chip" data-pcolor="${c}" aria-pressed="${c===p.color}" aria-label="色" style="background:${c};min-width:36px;min-height:32px"></button>`).join("")}</div></div>`:`<div class="item" style="cursor:default"><span><span class="dot" style="background:${p.color}"></span>${esc(p.name)}<span class="note">　${db.sessions.filter(s=>s.members.includes(p.id)).length}回参加</span></span><span class="row" style="flex-wrap:nowrap"><button class="small ghost" data-pedit="${p.id}" aria-label="${esc(p.name)}を直す">直す</button>${db.sessions.some(s=>s.members.includes(p.id))?"":`<button class="small ghost" data-pdel="${p.id}" aria-label="${esc(p.name)}を消す">消す</button>`}<button class="chip" data-me="${p.id}" aria-pressed="${me===p.id}">自分</button></span></div>`).join("")||'<p class="note">まだ誰もいません</p>'}</div>
-  <p class="note">「自分」を選ぶと、セットの収支もセッションの合計とカレンダーに入ります。</p>
+  <p class="note">「自分」を押すと、その人のセットの収支が、セッションの合計とカレンダーに入ります。フリーの収支は、押さなくても入ります。</p>
   ${mergeHTML()}
   ${canAddPlayer(db)?`<div class="row"><input id="pName" placeholder="名前" style="flex:1"><button class="primary" id="pAdd">メンバーを追加</button></div>`:`<div class="row between"><span class="note">無料で登録できるメンバーは${FREE_PLAYERS}人までです。${FREE_PLAYERS+1}人目からは拡張機能です。今いる人と記録はそのまま使えます。1回だけの人は、セットを始めるときにゲストを選べます。</span><button class="small" id="pToSet">設定へ</button></div>`}</section>`;
 }
@@ -1080,7 +1083,7 @@ async function saveFile(name,blob){
   const a=document.createElement("a"); a.href=URL.createObjectURL(blob); a.download=name; document.body.appendChild(a); a.click(); a.remove(); setTimeout(()=>URL.revokeObjectURL(a.href),10000);
   return "done";
 }
-const SAVED_MSG="保存しました。見つからないときは下の文字のコピーを使ってください";
+const SAVED_MSG="保存しました。ファイルが見つからないときは、設定の「ファイルに保存できないとき（文字でコピー）」を使ってください";
 async function saveBackup(){
   // ファイルの中にも保存した時刻を書く。あとで戻しても前回の保存が古くならないように
   const mark={backupAt:Date.now(),backupGames:gameCount(db)}, done=()=>{Object.assign(db.settings,mark); if(!unlocked()) db.settings.lastSaveDone=true; save(); render();
@@ -1089,7 +1092,7 @@ async function saveBackup(){
   if(res!=="cancel") return done();
   // iPhone は保存できていても取りやめと返すことがあるので、本人に選んでもらう
   const m=document.getElementById("bkMsg"); if(!m) return;
-  m.innerHTML=`取りやめました。保存できていたら押してください <button class="small" id="bkOk">保存できた</button>`;
+  m.innerHTML=`保存を取りやめたと返ってきました。実際に保存できていたら押してください <button class="small" id="bkOk">保存できた</button>`;
   document.getElementById("bkOk").onclick=done;
 }
 const CSV_TYPE={type:"text/csv;charset=utf-8"};
@@ -1106,32 +1109,32 @@ async function xlsxBlob(){
 const HOWTO=[
  ["始める",[
   ["ホーム画面に追加する","iPhone は Safari で開き、共有ボタンから「ホーム画面に追加」を選びます。Android は Chrome のメニューから追加します。一度開けば電波がなくても動きます。"],
-  ["自分を選ぶ","ルール/メンバのタブで、自分の行の「自分」を押します。セットの収支も、セッションの合計とカレンダーに入ります。"],
+  ["自分を選ぶ","ルール/メンバのタブで、自分の行の「自分」を押します。押すと、自分が入ったセットの収支が、セッションの合計とカレンダーと成績に入ります。"],
   ["メンバーとゲスト",`無料で登録できるメンバーは${FREE_PLAYERS}人までです。1回だけの人は、セットを始めるときにゲストを選びます。ゲストは人数に数えません。ゲスト1は別の日でも同じ1人として成績に出ます。`],
   ["ルールを選ぶ","ルール/メンバのタブで説明を見て、「セットで使う」か「フリーで使う」を押します。よく使うルールは「ルールを作る」で四麻か三麻を選び、持ち点やウマを入れて、名前をつけて保存します。保存したルールは「直す」で変えられ、「既定にする」と最初から選ばれた状態で出ます。"]]],
  ["記録する",[
-  ["フリーの結果を出す","着順を選び、点数を入れて「記録する」を押します。四麻は 300、三麻は 30 で 30000点です。箱下は「−」です。同卓の人は入れません。"],
-  ["セットを始める","セットのタブの「＋ 新しく始める」で、ルールとメンバーを選んで「始める」を押します。半荘ごとに「記録する」を押し、終わったら「このセッションを記録する」を押します。入れた内容はその場で保存されています。"],
+  ["フリーの結果を出す","着順を選び、点数を入れて「記録する」を押します。四麻は 300、三麻は 30 で 30000点です。箱下は「−」です。同卓の人の名前や点数は記録しません。"],
+  ["セットを始める","セットのタブの「＋ 新しく始める」で、ルールとメンバーを選んで「始める」を押します。半荘ごとに「この半荘を記録する」を押し、終わったら「このセッションを記録する」を押します。入れた内容はその場で保存されています。"],
   ["別の端末の記録を足す","記録係を交代した日の分などを1つにまとめます。もう一方の端末でバックアップを保存し、設定の「バックアップから戻す」でそのファイルを選んで「いまの記録に足す」を押します。拡張機能です。同じ人は名前で見分けるので、名前が違う人は別の人として増えます。そのときは記録をまとめる機能で1人にします。"],
   ["半荘ごとのチップ","セットのチップの欄の「半荘ごとに入れる」を押すと、半荘の点数と一緒に枚数を入れる形になり、合計は自動で出ます。拡張機能です。"],
   ["成績を1枚の画像にする","成績のタブで条件を選び、「1枚の画像にまとめる」を押します。収支、ポイント、収支の動き、着順が1枚になります。拡張機能です。"],
   ["精算を LINE で送る","精算の「精算を共有」を押して、送り先に LINE のグループを選びます。名前ごとの収支と、誰が誰にいくら渡すかが文字で送られます。無料で使えます。"],
-  ["4人で回す三麻","三麻のルールで4人を選んで始めると、半荘ごとに「抜ける人」を押して残りの3人の点数を入れる形になります。抜ける人は順番に送られるので、違うときだけ押し直します。"],
+  ["4人で回す三麻","三麻のルールで4人を選んで始めると、半荘ごとに「抜ける人」を押して残りの3人の点数を入れる形になります。抜ける人はアプリが順番に次の人へ移すので、違うときだけ押し直します。"],
   ["点数の入れ方","四麻は100点棒があるので100点単位で、325 で 32500点です。三麻は千点単位で、32.5 で 32500点です。"],
-  ["同点のとき","セットで同じ点数の人がいると、記録のときに上の人を聞きます。起家に近い人を押してください。ウマ・オカを分け合う形は、「持ち点・ウマを変える」で選べます。"],
+  ["同点のとき","セットで同じ点数の人がいると、記録のときに上位にする人を聞きます。起家に近い人を押してください。ウマ・オカを分け合う形は、「持ち点・ウマを変える」で選べます。"],
   ["端数の扱い","四麻は五捨六入が最初の設定です。32500点は32、32600点は33として計算します。フリーの「ルールを変える」か、セットの「持ち点・ウマを変える」で変えられます。"],
-  ["点数とポイントの違い","「終局の点数」は持ち点を入れ、ルールのウマ・オカを足して計算します。「ポイント」は最終の増減をそのまま入れ、合計が0になります。三麻で 30 と 20 を入れると、残りは点数なら 55、ポイントなら −50 です。切り替えられるのは、そのセットに半荘が入る前だけです。"],
+  ["点数とポイントの違い","「終局の点数」は終わったときの点数を入れ、ルールのウマ・オカを足して計算します。「ポイント」は最終の増減をそのまま入れ、合計が0になります。三麻で 30 と 20 を入れると、残りは点数なら 55、ポイントなら −50 です。切り替えられるのは、そのセットに半荘が入る前だけです。"],
   ["チップを入れる","半荘の終わりに、その時点の合計枚数を入れます。前の数は上書きされます。全員を足すと0枚になります。"]]],
  ["見る・直す",[
   ["セッションのタブ","フリーの日とセットの回が1本に並びます。「＋ セットを記録」「＋ フリーを記録」から入力の画面へ進みます。その日のセットがあれば続きが開きます。"],
-  ["場代を分ける","セットの「精算」に全員の合計を入れ、割り勘、勝ち額で、トップの3つから選びます。「勝ち額で」は勝った額に応じて払うので、順番は変わりません。店へまとめて払う人を選ぶと、場代の分も渡す額に入ります。最初は収支が一番の人で、「各自」なら渡す額に入りません。渡す額は最初は100P単位に丸めます。"],
+  ["場代を分ける","セットの「精算」に全員の合計を入れ、割り勘、勝ち額で、トップの3つから選びます。「勝ち額で」は勝った額に応じて払うので、順番は変わりません。店へまとめて払う人を選ぶと、場代の分も渡す額に入ります。まとめて払う人は、最初は収支が一番の人になっています。「各自」を選ぶと、場代は渡す額に入りません。渡す額は最初は100P単位に丸めます。"],
   ["精算を見る","セットの画面の下の「精算」に、人ごとの収支と、誰が誰にいくら渡すかが出ます。半荘やチップを入れるたびに変わります。あとからはセッションのタブでその回を開きます。"],
   ["入れた半荘を直す・消す","セットは表の「直す」「消す」を押します。フリーはセッションのタブでその日を開きます。消した直後は「元に戻す」で戻せます。"],
   ["成績を絞る","成績のタブで、期間、四麻と三麻を選びます。レート、場所、メンバー、セッションを選ぶ組み合わせの集計は拡張機能です。何も選ばなければ全部を集計します。"]]],
  ["データ",[
-  ["データはどこにあるか","記録はこの端末の中だけに残ります。同じ端末でも、別のブラウザでは記録を見られません。ホーム画面のアイコンと Safari でも分かれることがあります。いつも同じ開き方で使ってください。半荘を記録するたびにその場で保存し、入れかけの数字も残すので、アプリが落ちても開き直せば続きから入れられます。端末の故障やブラウザのデータ削除では消えるので、外へのバックアップも使ってください。"],
+  ["データはどこにあるか","記録はこの端末の中だけに残ります。同じ端末でも、別のブラウザでは記録を見られません。記録は、ホーム画面のアイコンから開いたときと Safari で開いたときでも分かれることがあります。いつも同じ開き方で使ってください。半荘を記録するたびに、アプリがその場で保存し、入れかけの数字も残します。アプリが落ちても、開き直せば続きから入れられます。端末の故障やブラウザのデータ削除では消えるので、ファイルへのバックアップ（拡張機能）も使ってください。"],
   ["機種変更するとき","前の端末の設定で、バックアップ（拡張機能）をファイルに保存します。新しい端末で「バックアップから戻す」からそのファイルを選びます。"],
-  ["バックアップから戻す","設定の一番上でファイルを選ぶと、今の記録との見比べが出ます。確かめて戻すと、読み直して同じ内容かを確かめます。戻すのは無料です。"]]]];
+  ["バックアップから戻す","設定の一番上でファイルを選ぶと、今の記録との見比べが出ます。見比べて「置き換える」を押すと、アプリが端末に書いた記録を読み直し、ファイルと同じ内容か確かめます。戻すのは無料です。"]]]];
 const howtoHTML=()=>`<section class="card" id="howto"><div class="row between"><h2>使い方</h2><button class="small ghost" id="tourAgain">最初の案内を見る</button></div>${HOWTO.map(([h,xs])=>`<h3>${h}</h3>${xs.map(([q,a])=>`<details><summary>${q}</summary><p class="note">${a}</p></details>`).join("")}`).join("")}</section>`;
 function lockedNote(what){ return `<p class="note">${what}は拡張機能です。上の欄に解放コードを入れると使えます。</p>`; }
 function viewUnlock(){
@@ -1139,29 +1142,29 @@ function viewUnlock(){
   if(unlocked()&&!db.settings.trial) return `<section class="card"><h2>拡張機能</h2><p class="note">メンバーの人数の上限がなくなり、バックアップ・別の端末の記録を足す・条件の保存・成績の1枚まとめ・半荘ごとのチップ・CSV/Excel の書き出しが使えます。${until?`<b>${new Date(until-1).toISOString().slice(0,10)} まで使えます。</b>`:""}</p></section>`;
   return `<section class="card"><h2>拡張機能</h2>
     ${unlocked()?`<p class="note"><b>試用中です。${new Date(until-1).toISOString().slice(0,10)} まで使えます。</b></p>`:db.settings.unlocked&&until?`<p class="warn">${db.settings.trial?"試用":"コード"}の期限が切れました。記録はそのまま残っていて、見ることも入れることもできます。</p>`:""}
-    ${canTrial(db.settings)?`<div class="row"><button class="small primary" id="trialOk">${TRIAL_DAYS}日試す</button><span class="note">コードなしで全部使えます。1回だけです。</span></div>`:""}
+    ${canTrial(db.settings)?`<div class="row"><button class="small primary" id="trialOk">${TRIAL_DAYS}日試す</button><span class="note">コードがなくても拡張機能を全部使えます。試せるのは1回だけです。</span></div>`:""}
     <p class="note">メンバーを${FREE_PLAYERS+1}人以上登録でき、レートやメンバーを組み合わせた集計・バックアップ・別の端末の記録を足す・条件の保存・成績の1枚まとめ・半荘ごとのチップ・CSV/Excel の書き出しが使えるようになります。買い切りで月額はありません。販売ページは準備中です。</p>
-    <div class="row"><input id="codeIn" placeholder="コードを貼り付け" autocapitalize="none" autocorrect="off" spellcheck="false" autocomplete="off" style="flex:1"><button class="primary" id="codeOk">開く</button></div>
+    <div class="row"><input id="codeIn" placeholder="コードを貼り付け" autocapitalize="none" autocorrect="off" spellcheck="false" autocomplete="off" style="flex:1"><button class="primary" id="codeOk">有効にする</button></div>
     <span class="warn" id="codeMsg"></span></section>`;
 }
 let restoreMsg="";
 function viewRestore(){
   return `<section class="card"><h2>バックアップから戻す</h2>
     ${restoreMsg?`<div class="sample" role="status"><span>${esc(restoreMsg)}</span></div>`:""}
-    <ol class="note howto"><li>下の欄で、保存した hanchan-note-日付.json を選ぶ（iPhone は「ブラウズ」から）</li><li>いまの記録とファイルの中身が並ぶので見比べる</li><li>「置き換える」を押す。読み直して、同じ内容か確かめて知らせます</li></ol>
+    <ol class="note howto"><li>下の欄で、保存した hanchan-note-日付.json を選ぶ（iPhone は「ブラウズ」から）</li><li>いまの記録とファイルの中身が並ぶので見比べる</li><li>「置き換える」を押す。アプリが読み直して、同じ内容か確かめて知らせる</li></ol>
     <label class="f">バックアップのファイルを選ぶ<input type="file" id="rsFile" accept=".json,application/json"></label>
     <details><summary>コピーした文字から戻す</summary><div class="stack" style="margin-top:8px"><textarea id="rs" placeholder="コピーしておいた文字を貼る"></textarea><button class="small" id="rsOk">読み取る</button></div></details>
-    ${snaps.length?`<details><summary>端末の中の自動の控えから戻す（${snaps.length}個）</summary><div class="stack" style="margin-top:8px"><p class="note">間違えて消したときに戻せます。端末が壊れたり機種変更したりすると一緒になくなります。</p>
+    ${snaps.length?`<details><summary>端末の中の自動の控えから戻す（${snaps.length}個）</summary><div class="stack" style="margin-top:8px"><p class="note">間違えて消したときに戻せます。この控えは、端末が壊れたり機種変更したりすると一緒になくなります。</p>
       <div class="list">${snaps.map((x,i)=>`<div class="item" style="cursor:default"><span class="num">${fmtAt(x.at)}</span><button class="small ghost" data-snap="${i}">これに戻す</button></div>`).join("")}</div></div></details>`:""}
     <span class="warn" id="rsMsg"></span>
-    <div class="stack" id="rsConfirm" hidden><div class="tablebox"><table id="rsTable"></table></div><p class="note" id="rsInfo"></p><button class="primary wide" id="rsYes">置き換える</button>
+    <div class="stack" id="rsConfirm" hidden><div class="tablebox"><table id="rsTable"></table></div><p class="note" id="rsInfo"></p><button class="primary wide danger" id="rsYes">置き換える</button>
       <h3>別の端末の記録を足す${unlocked()?"":'<span class="lock">拡張</span>'}</h3>
-      <p class="note">いまの記録はそのままで、ファイルにしかないセットを足します。同じ人は名前で見分け、同じ回は二重に入りません。</p>
+      <p class="note">いまの記録はそのままで、ファイルにしかないセットを足します。同じ人かどうかは名前で見分けます。同じ回は二重に入れません。</p>
       <label class="row" style="gap:6px"><input type="checkbox" id="rsFree"> フリーも足す（自分の別の端末のときだけ）</label>
       <button class="wide" id="rsMerge">いまの記録に足す</button></div>
   </section>`;
 }
-const SUMMARY_ROWS=[["sets","セットの回数"],["setGames","セットの半荘"],["freeGames","フリーの半荘"],["players","メンバー"],["rules","保存したルール"],["last","最後の記録"],["code","照合の番号"]];
+const SUMMARY_ROWS=[["sets","セットの回数"],["setGames","セットの半荘"],["freeGames","フリーの半荘"],["players","メンバー"],["rules","保存したルール"],["last","最後の記録"],["code","内容の確認番号"]];
 function bindRestore(){
   let pending=null;
   const read=text=>{ const msg=document.getElementById("rsMsg"), box=document.getElementById("rsConfirm"); msg.textContent=""; box.hidden=true;
@@ -1204,7 +1207,7 @@ function viewSettings(){
     ${!on&&db.settings.unlocked&&db.settings.unlockUntil&&!db.settings.lastSaveDone?`<p class="note">期限が切れたあとも記録を外に残せるよう、最後の1回だけ保存できます。</p><div class="row"><button class="small primary" id="bkLast">最後の1回を保存</button><span class="note" id="bkMsg"></span></div>`:""}
     ${on?`<p class="note">前回の保存：${db.settings.backupAt?fmtAt(db.settings.backupAt):"まだありません"}（保存していない記録 ${unsavedGames(db)}半荘）。iPhone は「ファイルに保存」を押して、出てきた画面で「"ファイル"に保存」を選びます。</p>`:""}
     ${on?`<div class="row"><button class="small primary" id="bkFile">ファイルに保存</button><span class="note" id="bkMsg"></span></div>
-    <label class="f">保存の声かけ<select id="nudge">${[[3,"3半荘ごと"],[5,"5半荘ごと"],[10,"10半荘ごと"],[30,"30半荘ごと"],[0,"声をかけない"]].map(([v,l])=>`<option value="${v}" ${(db.settings.nudgeEvery??NUDGE_DEFAULT)===v?"selected":""}>${l}</option>`).join("")}</select></label>
+    <label class="f">保存のお知らせ<select id="nudge">${[[3,"3半荘ごと"],[5,"5半荘ごと"],[10,"10半荘ごと"],[30,"30半荘ごと"],[0,"知らせない"]].map(([v,l])=>`<option value="${v}" ${(db.settings.nudgeEvery??NUDGE_DEFAULT)===v?"selected":""}>${l}</option>`).join("")}</select></label>
     <details><summary>ファイルに保存できないとき（文字でコピー）</summary><div class="stack" style="margin-top:8px"><textarea id="bk" readonly>${esc(JSON.stringify(db))}</textarea><div class="row"><button class="small" id="bkCopy">コピー</button></div></div></details>
 `:lockedNote("バックアップ")}
   </section>
@@ -1216,7 +1219,7 @@ function viewSettings(){
     <details><summary>ファイルに保存できないとき（文字でコピー）</summary><div class="stack" style="margin-top:8px"><textarea id="csv" readonly>${esc(toCSV(csvRows()))}</textarea><div class="row"><button class="small" id="csvCopy">コピー</button></div></div></details>`:lockedNote("書き出し")}
   </section>
   ${howtoHTML()}
-  <section class="card"><h2>入力</h2><label class="row" style="gap:8px"><input type="checkbox" id="delAsk" ${db.settings.delAsk===false?"":"checked"}> 半荘を消す前に確かめる</label><p class="note">外しても、消した直後は「元に戻す」で戻せます。</p></section>
+  <section class="card"><h2>消すときの確認</h2><label class="row" style="gap:8px"><input type="checkbox" id="delAsk" ${db.settings.delAsk===false?"":"checked"}> 半荘を消す前に確かめる</label><p class="note">外しても、消した直後は「元に戻す」で戻せます。</p></section>
   <section class="card"><h2>このアプリについて</h2><p class="note">${ADS_ON?"広告は成績タブの下にだけ出ます。拡張機能を開くと消えます。":"広告はありません。"}登録は要りません。試作版のため、データの形は今後変わることがあります。</p><a class="note" href="privacy.html">データの扱いについて</a></section>`;
 }
 function bindUnlock(){
