@@ -636,7 +636,7 @@ function viewSession(s){
       ${s.games.length?"":seg("input",[["score","終局の点数で入れる"],["point","ポイントで入れる"]],s.rule.direct?"point":"score")}
       ${s.rule.direct?`<p class="note">30 で +30。マイナスは「−」を押します。ウマ・オカは足さず、そのままの数で計算します。</p>`:unitNote(s.rule)}
       ${s.members.length>s.rule.mode?`<div id="sOut"><span class="note">この半荘で抜ける人</span><div class="row">${s.members.map(id=>`<button class="chip" data-out="${id}">${esc(P(id).name)}</button>`).join("")}</div></div>`:""}
-      <div class="grid2">${s.members.map(id=>{ const f=sfield(`data-sc="${id}" placeholder="${s.rule.direct?"30":s.rule.mode===4?"320":"32"}"`,editGame===null?(resume.sc[s.id]||{})[id]??"":s.games[editGame].scores[id]===undefined?"":String(s.games[editGame].scores[id]/scoreUnit(s.rule))), by=editGame===null?(resume.sc[s.id]||{})._tobi:s.games[editGame].tobiBy;
+      <div class="grid2">${s.members.map(id=>{ const f=sfield(`data-sc="${id}" placeholder="${s.rule.direct?"30":s.rule.mode===4?"320":"32"}"`,editGame===null?(resume.sc[s.id]||{})[id]??"":s.games[editGame].scores[id]===undefined?"":scoreText(s.games[editGame].scores[id],scoreUnit(s.rule))), by=editGame===null?(resume.sc[s.id]||{})._tobi:s.games[editGame].tobiBy;
         return s.rule.tobi&&!s.rule.direct?`<div class="f"><span class="row between" style="flex-wrap:nowrap">${esc(P(id).name)}<button class="chip tiny" data-tb="${id}" aria-pressed="${by===id}" aria-label="${esc(P(id).name)}が飛ばした">飛ばした</button></span>${f}</div>`:`<label class="f">${esc(P(id).name)}${f}</label>`; }).join("")}</div>
       <button class="small ghost" id="auto">残り1人の点数を自動で出す</button>
       ${s.chipByGame?`<h3>この半荘のチップ</h3><div class="stack">${s.members.map(id=>`<label class="f">${esc(P(id).name)}${chipField(`data-gc="${id}" placeholder="0"`,editGame===null?((resume.sc[s.id]||{})._gc||{})[id]??"":(s.games[editGame].chips||{})[id]??"")}</label>`).join("")}</div>`:""}
@@ -730,7 +730,7 @@ function bindSession(){
   document.getElementById("auto").onclick=()=>{const inputs=live(), empty=inputs.filter(i=>i.value.trim()==="");if(empty.length!==1){document.getElementById("gErr").textContent="空いている欄が1つのときに使えます";return;}
     const vals=inputs.filter(i=>i.value.trim()!=="").map(i=>parseScore(i.value,scoreUnit(s.rule)));
     if(vals.includes(null)){document.getElementById("gErr").textContent="読めない点数があります";return;}
-    empty[0].value=String(((s.rule.direct?0:s.rule.start*s.rule.mode)-vals.reduce((a,b)=>a+b,0))/scoreUnit(s.rule)); keepScores();};
+    empty[0].value=scoreText((s.rule.direct?0:s.rule.start*s.rule.mode)-vals.reduce((a,b)=>a+b,0),scoreUnit(s.rule)); keepScores();};
   document.querySelectorAll("[data-input]").forEach(b=>b.onclick=()=>{s.rule.direct=b.dataset.input==="point"; db.settings.lastDirect=s.rule.direct; save(); render();});
   document.getElementById("addG").onclick=()=>{
     const inputs=live();
@@ -852,7 +852,7 @@ function freeRanks(games){
 // 入れかけの点数を戻す。四麻と三麻を切り替えたときは、点数はそのままで入れ方だけ今のルールに合わせる
 function keptScore(kept,r){
   if(!kept.score||!kept.unit||kept.unit===scoreUnit(r)) return kept.score||"";
-  const sc=parseScore(kept.score,kept.unit); return sc===null?kept.score:String(sc/scoreUnit(r));
+  const sc=parseScore(kept.score,kept.unit); return sc===null?kept.score:scoreText(sc,scoreUnit(r));
 }
 function viewFree(){
   const f=freeState(), r=f.rule, day=today(), kept=resume.free;
@@ -957,7 +957,7 @@ function viewFreeDay(day){
   const x=freeSummary(gs);
   const form=g=>`<div class="stack" id="eForm"><div class="seg" id="eRanks"></div>
     <div id="eUnit">${unitNote(g.rule)}</div>
-    <label class="f">点数${sfield('id="eScore"',String(g.score/scoreUnit(g.rule)))}</label>
+    <label class="f">点数${sfield('id="eScore"',scoreText(g.score,scoreUnit(g.rule)))}</label>
     <label class="f">チップ${chipField('id="eChip"',g.chips||0)}</label>
     <button class="chip" id="eTobi" aria-pressed="${!!g.tobiWin}">飛ばした</button>
     <div class="grid2"><label class="f">日付<input type="date" id="eDate" value="${g.date}"></label><label class="f">ルール<select id="eRule"><option value="">いまのまま</option>${db.rules.map(r=>`<option value="${r.id}">${esc(r.name)}</option>`).join("")}<option value="m4">既定の四麻</option><option value="m3">既定の三麻</option></select></label></div>
@@ -987,7 +987,7 @@ function bindFreeDay(){
   document.getElementById("eRule").onchange=e=>{
     const v=e.target.value, sc=parseScore(scoreEl.value,scoreUnit(rule));
     rule=!v?g.rule:v==="m4"||v==="m3"?(m=>({...ruleCopy(g.rule),...JSON.parse(JSON.stringify(FREE_RULES[m])),chipRate:chipFor(m,g.rule.rate)}))(Number(v.slice(1))):ruleCopy(db.rules.find(r=>r.id===v).rule);
-    if(sc!==null) scoreEl.value=String(sc/scoreUnit(rule)); // 点数はそのままで、入れ方だけ新しいルールに合わせる
+    if(sc!==null) scoreEl.value=scoreText(sc,scoreUnit(rule)); // 点数はそのままで、入れ方だけ新しいルールに合わせる
     shape();
   };
   shape();

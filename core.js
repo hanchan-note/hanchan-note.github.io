@@ -191,6 +191,11 @@ function parseScore(v,unit=1000){
   // 999 までは単位を掛ける（四麻 300 → 30000点、三麻 300 → 300000点）。1000 からはそのままの点数
   return Math.round(Math.abs(n)<=999 ? n*unit : n);
 }
+// 記録した点数を入力欄に戻す形。parseScore で同じ点数に読めるよう、999 を超えるときはそのままの点数で出す（四麻 120000点 → "120000"）
+function scoreText(sc,unit=1000){
+  const q=sc/unit;
+  return String(Math.abs(q)<=999 ? q : sc);
+}
 
 // フリーの1半荘：自分の点数と着順だけで出す。ゲーム代は負け分と同じく引く。feeTop はトップだけ違う店のため
 // r.tobi はトビ賞。0点以下で払い、tobiWin（人を飛ばした）でもらう
@@ -229,11 +234,14 @@ function ruleNote(r){
 // 起こらない組み合わせは null。k着の点数は合計÷k を超えず、1着は持ち点を下回らない
 const QUICK_SCORES=[60,50,45,40,35,30,25,20,15,10,5,1,0,-5,-10];
 // 起こらない着順と点数の組み合わせ。2着の点数の2倍が全員の合計を超える、1着が持ち点より下、など
-const impossibleScore=(score,rank,r)=>score*rank>r.start*r.mode || (rank===1&&score<r.start);
+// 本当に起こらない組み合わせ。トップは平均（持ち点）以上、ラスは平均以下。箱下があるので、間の着順と大きな点数は起こりうる（四麻25000持ちのトップ12万点など）
+const impossibleScore=(score,rank,r)=>(rank===1&&score<r.start) || (rank===r.mode&&score>r.start);
+// 早見表に出さない、箱下がないと起こらない組み合わせ
+const unusualScore=(score,rank,r)=>score*rank>r.start*r.mode || impossibleScore(score,rank,r);
 function quickTable(r){
   return QUICK_SCORES.map(k=>{ const score=k*1000;
     return {score, cells:Array.from({length:r.mode},(_,i)=>{ const rank=i+1;
-      if(impossibleScore(score,rank,r)) return null;
+      if(unusualScore(score,rank,r)) return null;
       return freeResult(score,rank,0,r).total; })}; });
 }
 
@@ -460,4 +468,4 @@ function backupDue(d){
   return gameCount(d)-Math.max(Number(d.settings.backupGames||0),Number(d.settings.nudgeSkip||0)) >= every;
 }
 
-if(typeof module!=="undefined") module.exports={settlePay,venuePayer,settleUnit,venueTotal,roundHolder,basicFilter,mergeBackup,syncGameChips,startGameChips,stopGameChips,settleText,rankDist,outOf,nextOut,TRIAL_DAYS,canTrial,startTrial,swapPlayer,mergePlayer,parseUma,umaHelp,hasSample,clearSample,parseSigned,parseScore,freeResult,scoreGame,roundKeepTotal,extraGap,chipGap,sessionTotals,settle,filterSessions,playerStats,toCSV,RULE_PRESETS,verifyCode,isUnlocked,CODE_EPOCH,isBackup,gameCount,nextSnaps,unsavedGames,backupDue,ruleNote,tieGroups,venueShares,venueFlips,impossibleScore,scoreUnit,roundScore,playersByRecent,FREE_PLAYERS,canAddPlayer,GUESTS,ensureGuest,freeSummary,freeDays,filterFree,chipFor,quickTable,backupSummary,logEntries,logTotals,dayMap,monthGrid,shiftMonth};
+if(typeof module!=="undefined") module.exports={settlePay,venuePayer,settleUnit,venueTotal,roundHolder,basicFilter,mergeBackup,syncGameChips,startGameChips,stopGameChips,settleText,rankDist,outOf,nextOut,TRIAL_DAYS,canTrial,startTrial,swapPlayer,mergePlayer,parseUma,umaHelp,hasSample,clearSample,parseSigned,parseScore,scoreText,freeResult,scoreGame,roundKeepTotal,extraGap,chipGap,sessionTotals,settle,filterSessions,playerStats,toCSV,RULE_PRESETS,verifyCode,isUnlocked,CODE_EPOCH,isBackup,gameCount,nextSnaps,unsavedGames,backupDue,ruleNote,tieGroups,venueShares,venueFlips,impossibleScore,scoreUnit,roundScore,playersByRecent,FREE_PLAYERS,canAddPlayer,GUESTS,ensureGuest,freeSummary,freeDays,filterFree,chipFor,quickTable,backupSummary,logEntries,logTotals,dayMap,monthGrid,shiftMonth};
