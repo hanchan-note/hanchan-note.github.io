@@ -136,7 +136,7 @@ details summary{cursor:pointer;color:var(--accent)}
 
 <div class="wrap">
   <header class="top">
-    <div><h1>半荘ノート</h1><div class="sub">麻雀の点数・精算・成績 <span class="badge">試作版</span></div></div>
+    <div><h1>半荘ノート</h1><div class="sub">麻雀の点数・精算・成績</div></div>
   </header>
   <main id="view" class="stack"></main>
   <aside id="adBox" class="adbox" aria-label="広告" hidden></aside>
@@ -1261,7 +1261,7 @@ function viewSettings(){
   </section>
   ${howtoHTML()}
   <section class="card"><h2>消すときの確認</h2><label class="row" style="gap:8px"><input type="checkbox" id="delAsk" ${db.settings.delAsk===false?"":"checked"}> 半荘を消す前に確かめる</label><p class="note">外しても、消した直後は「元に戻す」で戻せます。</p></section>
-  <section class="card"><h2>このアプリについて</h2><p class="note">${ADS_ON?"広告は成績タブの下にだけ出ます。拡張機能を開くと消えます。":"広告はありません。"}登録は要りません。試作版のため、データの形は今後変わることがあります。</p><a class="note" href="privacy.html">データの扱いについて</a></section>`;
+  <section class="card"><h2>このアプリについて</h2><p class="note">${ADS_ON?"広告は成績タブの下にだけ出ます。拡張機能を開くと消えます。":"広告はありません。"}登録は要りません。</p><a class="note" href="privacy.html">データの扱いについて</a></section>`;
 }
 function bindUnlock(){
   const tr=document.getElementById("trialOk"); if(tr) tr.onclick=()=>{ startTrial(db.settings,Date.now()); save(); render(); toast(`${TRIAL_DAYS}日間、拡張機能を試せます`); };
