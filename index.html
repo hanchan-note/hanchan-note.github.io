@@ -1268,7 +1268,7 @@ function bindUnlock(){
   const ok=document.getElementById("codeOk"); if(!ok) return;
   ok.onclick=async()=>{ const r=await verifyCode(document.getElementById("codeIn").value);
     if(r.ok){ db.settings.unlocked=true; db.settings.unlockUntil=r.until; delete db.settings.lastSaveDone; delete db.settings.expirySkip; delete db.settings.trial; save(); render(); return; }
-    document.getElementById("codeMsg").textContent=r.expired?"このコードは期限が切れています":"コードが違います。入力を確かめてください"; };
+    document.getElementById("codeMsg").textContent=r.stopped?"このコードは使えなくなりました。購入された方は、出品者へメッセージでお知らせください。新しいコードをお渡しします":r.expired?"このコードは期限が切れています":"コードが違います。入力を確かめてください"; };
 }
 function bindBackup(){
   document.getElementById("delAsk").onchange=e=>{db.settings.delAsk=e.target.checked;save();};

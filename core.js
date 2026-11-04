@@ -431,16 +431,21 @@ function toCSV(rows){ return rows.map(r=>r.map(c=>{const s=String(c??""); return
    中身は 版1・期限2（2026-01-01 からの日数、0 は期限なし）・番号4。作り方は tools/make_codes.js ===== */
 const CODE_PUB="BDNb6MxF1tA4n_4-hTgDnN9Kc53jmGOvr4i11bdMsnvCaf9Y9rpzhRy3LRYV4B7-v8Qrjn5wSx7JMHUa35vFFd4", CODE_EPOCH=Date.UTC(2026,0,1);
 const b64u=s=>Uint8Array.from(atob(s.replace(/-/g,"+").replace(/_/g,"/")),c=>c.charCodeAt(0));
-async function verifyCode(code,pub=CODE_PUB,now=Date.now()){
+// 流出したコードの番号（16進8桁）。ここにあるコードは新しく入れられない。すでに解放した端末はそのまま使える
+// 番号は node tools/stop_code.js で調べる。止めたら新しいコードを作り、PDF を差し替える
+const STOPPED_CODES=[];
+async function verifyCode(code,pub=CODE_PUB,now=Date.now(),stopped=STOPPED_CODES){
   const m=/^HN2([A-Za-z0-9_-]{95})$/.exec(String(code||"").replace(/\s/g,""));
   if(!m) return {ok:false};
   try{
     const b=b64u(m[1]), body=b.slice(0,7), key=await crypto.subtle.importKey("raw",b64u(pub),{name:"ECDSA",namedCurve:"P-256"},false,["verify"]);
     if(body[0]!==2 || !await crypto.subtle.verify({name:"ECDSA",hash:"SHA-256"},key,b.slice(7),body)) return {ok:false};
     const days=body[1]*256+body[2], until=days?CODE_EPOCH+days*864e5:0;
+    if(stopped.includes(codeNumber(body))) return {ok:false,stopped:true};
     return until&&now>=until?{ok:false,expired:true,until}:{ok:true,until};
   }catch(e){ return {ok:false}; }
 }
+const codeNumber=body=>[...body.slice(3,7)].map(x=>x.toString(16).padStart(2,"0")).join("");
 // 解放の状態。期限つきのコードは期限が過ぎると閉じる。記録はそのまま残る
 const isUnlocked=(s,now=Date.now())=>!!(s&&s.unlocked)&&(!s.unlockUntil||now<s.unlockUntil);
 function fnv1a(s){ let h=0x811c9dc5; for(let i=0;i<s.length;i++){ h^=s.charCodeAt(i); h=Math.imul(h,0x01000193)>>>0; } return h; }
@@ -468,4 +473,4 @@ function backupDue(d){
   return gameCount(d)-Math.max(Number(d.settings.backupGames||0),Number(d.settings.nudgeSkip||0)) >= every;
 }
 
-if(typeof module!=="undefined") module.exports={settlePay,venuePayer,settleUnit,venueTotal,roundHolder,basicFilter,mergeBackup,syncGameChips,startGameChips,stopGameChips,settleText,rankDist,outOf,nextOut,TRIAL_DAYS,canTrial,startTrial,swapPlayer,mergePlayer,parseUma,umaHelp,hasSample,clearSample,parseSigned,parseScore,scoreText,freeResult,scoreGame,roundKeepTotal,extraGap,chipGap,sessionTotals,settle,filterSessions,playerStats,toCSV,RULE_PRESETS,verifyCode,isUnlocked,CODE_EPOCH,isBackup,gameCount,nextSnaps,unsavedGames,backupDue,ruleNote,tieGroups,venueShares,venueFlips,impossibleScore,scoreUnit,roundScore,playersByRecent,FREE_PLAYERS,canAddPlayer,GUESTS,ensureGuest,freeSummary,freeDays,filterFree,chipFor,quickTable,backupSummary,logEntries,logTotals,dayMap,monthGrid,shiftMonth};
+if(typeof module!=="undefined") module.exports={codeNumber,STOPPED_CODES,settlePay,venuePayer,settleUnit,venueTotal,roundHolder,basicFilter,mergeBackup,syncGameChips,startGameChips,stopGameChips,settleText,rankDist,outOf,nextOut,TRIAL_DAYS,canTrial,startTrial,swapPlayer,mergePlayer,parseUma,umaHelp,hasSample,clearSample,parseSigned,parseScore,scoreText,freeResult,scoreGame,roundKeepTotal,extraGap,chipGap,sessionTotals,settle,filterSessions,playerStats,toCSV,RULE_PRESETS,verifyCode,isUnlocked,CODE_EPOCH,isBackup,gameCount,nextSnaps,unsavedGames,backupDue,ruleNote,tieGroups,venueShares,venueFlips,impossibleScore,scoreUnit,roundScore,playersByRecent,FREE_PLAYERS,canAddPlayer,GUESTS,ensureGuest,freeSummary,freeDays,filterFree,chipFor,quickTable,backupSummary,logEntries,logTotals,dayMap,monthGrid,shiftMonth};
