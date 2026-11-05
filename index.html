@@ -320,7 +320,7 @@ function render(){
   charts.forEach(c=>c.destroy()); charts=[];
   document.querySelectorAll("nav.tabs button").forEach(b=>b.setAttribute("aria-current",b.dataset.tab===tab));
   const banner = hasSample(db) ? `<div class="sample"><span>いま入っているのは見本のデータです</span><button class="small" id="clearSample">見本を消して始める</button></div>`:"";
-  const notice = db.settings.noticeDone ? "" : `<div class="sample"><span>記録はこの端末の中だけに残ります。同じ端末でも、別のブラウザでは記録を見られません。記録は、ホーム画面のアイコンから開いたときと Safari で開いたときでも分かれることがあります。iPhone はホーム画面に追加して、アイコンから使ってください。機種変更やブラウザのデータ削除で消えるので、残したいときはバックアップ（拡張機能）を使ってください。使い方は設定にあります。</span><button class="small" id="noticeOk">わかりました</button></div>`;
+  const notice = db.settings.noticeDone ? "" : `<div class="sample"><span>記録はこの端末の中だけに残ります。同じ端末でも、別のブラウザでは記録を見られません。記録は、ホーム画面のアイコンから開いたときと Safari で開いたときでも分かれることがあります。iPhone はホーム画面に追加して、アイコンから使ってください。機種変更やブラウザのデータ削除で消えるので、残したいときはバックアップ（拡張機能）を使ってください。使い方は設定にあります。</span><button class="small" id="noticeOk">閉じる</button></div>`;
   const broken = saveBroken ? `<p class="warn">記録を保存できませんでした。端末の空き容量を確かめてください。</p>`:"";
   const due = unlocked() && (tab==="stats"||(tab==="sessions"&&!openSession)) && backupDue(db) ? `<div class="sample"><span>ファイルに保存していない記録が ${unsavedGames(db)}半荘あります</span><span class="row"><button class="small ghost" id="bkLater">あとで</button><button class="small" id="bkDue">保存する</button></span><span id="bkMsg" style="flex-basis:100%"></span></div>`:"";
   const until=db.settings.unlockUntil, left=until?Math.ceil((until-Date.now())/864e5):0;
