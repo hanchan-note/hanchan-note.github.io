@@ -563,7 +563,7 @@ function viewSet(){
     ${recent.length?`<h3>前の回を続ける</h3><div class="list">${recent.map(entryRow).join("")}</div>`:'<p class="note">まだ記録がありません。「新しく始める」から入れてください。</p>'}</section>`;
 }
 const MEM_SHOW=8;
-const unitNote=r=>r.mode===4?`<p class="unitnote"><b>四麻は100点単位</b>：300 で 30000点、325 で 32500点。三麻と入れ方が違います。箱下は「−」を押します。</p>`:`<p class="unitnote sanma"><b>三麻は千点単位</b>：30 で 30000点、32.5 で 32500点。箱下は「−」を押します。</p>`;
+const unitNote=r=>r.mode===4?`<p class="unitnote"><b>四麻は100点単位</b>：300 で 30000点、325 で 32500点。箱下は「−」を押します。<br>※三麻と入力方法が違います</p>`:`<p class="unitnote sanma"><b>三麻は千点単位</b>：30 で 30000点、32.5 で 32500点。箱下は「−」を押します。</p>`;
 const presetOf=v=>{ if(v.startsWith("r:")){const x=db.rules.find(r=>r.id===v.slice(2)); return {label:x.name,tie:"seat",...x.rule};} return RULE_PRESETS[v]; };
 function newBoxHTML(){
   const last=db.settings.lastMembers||[], ps=playersByRecent(db).filter(p=>!p.guest);
