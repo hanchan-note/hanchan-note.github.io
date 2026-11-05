@@ -132,6 +132,7 @@ nav.tabs button[aria-current="true"]{color:var(--accent);background:var(--accent
 textarea{width:100%;min-height:120px;font:12px/1.4 ui-monospace,Consolas,monospace;background:var(--bg);color:var(--fg);border:1px solid var(--line);border-radius:10px;padding:8px}
 .sample{background:var(--accent-weak);color:var(--accent);border-radius:12px;padding:8px 12px;font-size:13px;display:flex;justify-content:space-between;gap:8px;align-items:center;flex-wrap:wrap}
 details summary{cursor:pointer;color:var(--accent)}
+.more summary{font-size:13px;color:var(--mute);min-height:28px;display:flex;align-items:center}
 @media (prefers-reduced-motion:no-preference){.card{transition:border-color .2s}}
 </style>
 
@@ -234,7 +235,10 @@ const HOW={
   players:["ルールを選んで「セットで使う」か「フリーで使う」を押す。ないルールは「ルールを作る」で作れる","一緒に打つ人を「メンバーを追加」で入れる","自分の行の「自分」を押すと、その人の収支がセッションの合計と成績に入る"],
   stats:["期間やレート、メンバーなどを選ぶ（何も選ばなければ全部の記録を集計する）","下の表とグラフが選んだ条件で変わる","フリーの成績は上、セットの成績はその下に出る"],
 };
-const howBox=k=>`<details class="howtobox" data-howto="${k}" ${(db.settings.howClosed||{})[k]?"":"open"}><summary>【使い方】</summary><ol class="note howto">${HOW[k].map(x=>`<li>${x}</li>`).join("")}</ol></details>`;
+// 自分で記録を入れたあとは、慣れたものとして閉じて出す
+const howBox=k=>`<details class="howtobox" data-howto="${k}" ${(db.settings.howClosed||{})[k]||gameCount({...db,sessions:db.sessions.filter(s=>!s.sample)})?"":"open"}><summary>【使い方】</summary><ol class="note howto">${HOW[k].map(x=>`<li>${x}</li>`).join("")}</ol></details>`;
+// 長い注意書きは閉じておき、押すと開く
+const more=t=>`<details class="more"><summary>くわしく</summary><p class="note">${t}</p></details>`;
 view.addEventListener("toggle",e=>{ const k=e.target.dataset&&e.target.dataset.howto; if(!k) return; const c=db.settings.howClosed=db.settings.howClosed||{}; if(!!c[k]===!e.target.open) return; c[k]=!e.target.open; save(); },true);
 // 欄を入れた直後に押しても、欄を離れたときの描き直しでボタンが空振りしないようにする
 view.addEventListener("mousedown",e=>{ if(e.target.closest("[data-step],[data-pm]")) e.preventDefault(); });
@@ -320,7 +324,7 @@ function render(){
   charts.forEach(c=>c.destroy()); charts=[];
   document.querySelectorAll("nav.tabs button").forEach(b=>b.setAttribute("aria-current",b.dataset.tab===tab));
   const banner = hasSample(db) ? `<div class="sample"><span>いま入っているのは見本のデータです</span><button class="small" id="clearSample">見本を消して始める</button></div>`:"";
-  const notice = db.settings.noticeDone ? "" : `<div class="sample"><span>記録はこの端末の中だけに残ります。同じ端末でも、別のブラウザでは記録を見られません。記録は、ホーム画面のアイコンから開いたときと Safari で開いたときでも分かれることがあります。iPhone はホーム画面に追加して、アイコンから使ってください。機種変更やブラウザのデータ削除で消えるので、残したいときはバックアップ（拡張機能）を使ってください。使い方は設定にあります。</span><button class="small" id="noticeOk">閉じる</button></div>`;
+  const notice = db.settings.noticeDone ? "" : `<div class="sample"><span>記録はこの端末の中だけに残ります。iPhone はホーム画面に追加して、アイコンから使ってください。</span><button class="small" id="noticeOk">閉じる</button></div>`;
   const broken = saveBroken ? `<p class="warn">記録を保存できませんでした。端末の空き容量を確かめてください。</p>`:"";
   const due = unlocked() && (tab==="stats"||(tab==="sessions"&&!openSession)) && backupDue(db) ? `<div class="sample"><span>ファイルに保存していない記録が ${unsavedGames(db)}半荘あります</span><span class="row"><button class="small ghost" id="bkLater">あとで</button><button class="small" id="bkDue">保存する</button></span><span id="bkMsg" style="flex-basis:100%"></span></div>`:"";
   const until=db.settings.unlockUntil, left=until?Math.ceil((until-Date.now())/864e5):0;
@@ -437,7 +441,7 @@ function viewStats(){
       <thead><tr><th>名前</th><th>収支</th><th>ポイント</th><th>半荘</th></tr></thead>
       <tbody>${ids.map(id=>{const p=st[id];return `<tr><td><span class="dot" style="background:${P(id).color}"></span>${esc(P(id).name)}</td><td class="${cls(p.yen)}">${fmtP(p.yen)}</td><td class="${cls(p.point)}">${fmtPt(p.point)}</td><td>${p.games}</td></tr>`}).join("")}</tbody>
     </table></div>
-    <p class="note">収支＝ポイント×千点あたり＋チップ×1枚あたり＋その他の項目−場代。同点のときはウマ・オカを分けず、記録のときに選んだ人を上位にします（分け合う形を選んだセットを除く）。</p>
+    ${more("収支＝ポイント×千点あたり＋チップ×1枚あたり＋その他の項目−場代。同点のときはウマ・オカを分けず、記録のときに選んだ人を上位にします（分け合う形を選んだセットを除く）。")}
     <button class="small" id="sumImg">1枚の画像にまとめる${unlocked()?"":'<span class="lock">拡張</span>'}</button>
     <div class="stack" id="sumBox" hidden><img id="sumPrev" alt="成績をまとめた画像" style="width:100%;border:1px solid var(--line);border-radius:10px"><button class="small primary" id="sumSave">画像を保存・共有</button></div>
   </section>
@@ -832,7 +836,7 @@ const ruleFields=(r,key,double=false)=>`<div class="grid2"><label class="f">持�
     <label class="f">千点未満の端数<select data-${key}="round">${roundOpts(r.round)}</select></label>
     <div class="grid2"><label class="f">千点あたり（P）<input inputmode="decimal" data-${key}="rate" value="${r.rate}"></label><label class="f">チップ1枚（P）<input inputmode="decimal" data-${key}="chipRate" value="${r.chipRate}"></label></div>
     <div class="grid2"><label class="f">ゲーム代（P）<input inputmode="decimal" data-${key}="fee" value="${r.fee}"></label><label class="f">トップが払うゲーム代（P）<input inputmode="decimal" data-${key}="feeTop" value="${r.feeTop}" placeholder="ほかの人と同じ"></label></div>
-    <p class="note">トップだけゲーム代が違う店では、トップが払う額をそのまま入れます。ほかの人との差額ではありません。全員同じなら空欄にします。</p>`;
+    ${more("トップだけゲーム代が違う店では、トップが払う額をそのまま入れます。ほかの人との差額ではありません。全員同じなら空欄にします。")}`;
 // 入力欄の値をルールに入れる。入れられないときは直し方の文を返す
 function setRuleField(i,r,key){
   const k=i.dataset[key];
@@ -877,7 +881,7 @@ function viewFree(){
   </section>
   <section class="card"><div class="row between"><h2>今日の半荘</h2><span class="note">${todays.length}半荘</span></div>
     <div class="list">${todays.slice().reverse().map(freeItem).join("")||'<p class="note">まだ記録がありません。</p>'}</div>
-    <p class="note">半荘は「記録する」を押した時点で保存されます。今日の分はセッションのタブにも1日分として入るので、まとめて記録する操作はいりません。</p>
+    ${more("半荘は「記録する」を押した時点で保存されます。今日の分はセッションのタブにも1日分として入るので、まとめて記録する操作はいりません。")}
   </section>
   <section class="card"><details id="fRules" ${open?"open":""}><summary>ルールを変える</summary><div class="stack" style="margin-top:8px">
     ${ruleFields(r,"frule")}
@@ -887,7 +891,7 @@ function viewFree(){
     <div class="row"><input id="rName" placeholder="ルールの名前（例：いつもの三麻）" value="${esc((db.rules.find(x=>x.id===f.ruleFrom)||{}).name||"")}" style="flex:1"><button class="small" id="rSave">このルールを保存</button></div>
   </div></details></section>
   <section class="card"><details class="howtobox" data-howto="quick" ${(db.settings.howClosed||{}).quick?"":"open"}><summary><h2>点数の早見表</h2></summary>
-    <p class="note">いまのルールでの結果です。チップは入れず、ゲーム代は引いています。飛ばしたときのトビ賞は入っていません。「−」は起こらない組み合わせです。</p>
+    ${more("いまのルールでの結果です。チップは入れず、ゲーム代は引いています。飛ばしたときのトビ賞は入っていません。「−」は起こらない組み合わせです。")}
     <div class="tablebox"><table id="fTable">${quickHTML(r)}</table></div></details></section>`;
 }
 function bindFree(){
@@ -1022,9 +1026,9 @@ function viewPlayers(){
   const me=db.settings.me, def=db.settings.defaultRule;
   return `<section class="card">${howBox("players")}</section>
   <section class="card"><h2>保存したルール</h2>
-  <p class="note">保存したルールは、フリーとセットの画面で選ぶだけで使えます。既定にしたルールは、最初から選ばれた状態で出ます。</p>
   <div class="list">${db.rules.map(x=>`<div class="stack item" style="cursor:default;display:grid"><div><b>${esc(x.name)}</b>${def===x.id?' <span class="tag">既定</span>':""}<br><span class="meta">${ruleLine(x.rule)}<br>${ruleNote(x.rule)}</span></div>
     <div class="row"><button class="small" data-suse="r:${x.id}">セットで使う</button><button class="small" data-ruse="${x.id}">フリーで使う</button><button class="small ghost" data-redit="${x.id}">直す</button><button class="small ghost" data-rdef="${x.id}">${def===x.id?"既定を外す":"既定にする"}</button><button class="small ghost" data-rdel="${x.id}">消す</button></div></div>`).join("")||'<p class="note">まだありません。下の「ルールを作る」で作れます。</p>'}</div>
+  ${db.rules.length?more("保存したルールは、フリーとセットの画面で選ぶだけで使えます。既定にしたルールは、最初から選ばれた状態で出ます。"):""}
   ${ruleMakeHTML()}
   <h3>よくあるルール</h3>
   <div class="list">${["m4f","m4g","m3f"].map(k=>{const r=RULE_PRESETS[k];return `<div class="stack item" style="cursor:default;display:grid"><div><b>${r.label}</b><br><span class="meta">${r.note}<br>${ruleNote(r)}</span></div><div class="row"><button class="small" data-suse="${k}">セットで使う</button><button class="small" data-puse="${k}">フリーで使う</button><button class="small ghost" data-pmake="${k}">これを元に作る</button></div></div>`;}).join("")}</div>
@@ -1032,7 +1036,7 @@ function viewPlayers(){
   </section>
   <section class="card"><h2 id="memH">メンバー</h2>
   <div class="list">${db.players.filter(p=>!p.guest).map(p=>editP===p.id?`<div class="stack item" style="cursor:default;display:grid"><div class="row"><input id="pEName" value="${esc(p.name)}" aria-label="名前" style="flex:1"><button class="small primary" id="pESave">保存</button><button class="small ghost" id="pENo">やめる</button></div><div class="row">${COLORS.map(c=>`<button class="chip" data-pcolor="${c}" aria-pressed="${c===p.color}" aria-label="色" style="background:${c};min-width:36px;min-height:32px"></button>`).join("")}</div></div>`:`<div class="item" style="cursor:default"><span><span class="dot" style="background:${p.color}"></span>${esc(p.name)}<span class="note">　${db.sessions.filter(s=>s.members.includes(p.id)).length}回参加</span></span><span class="row" style="flex-wrap:nowrap"><button class="small ghost" data-pedit="${p.id}" aria-label="${esc(p.name)}を直す">直す</button>${db.sessions.some(s=>s.members.includes(p.id))?"":`<button class="small ghost" data-pdel="${p.id}" aria-label="${esc(p.name)}を消す">消す</button>`}<button class="chip" data-me="${p.id}" aria-pressed="${me===p.id}">自分</button></span></div>`).join("")||'<p class="note">まだ誰もいません</p>'}</div>
-  <p class="note">「自分」を押すと、その人のセットの収支が、セッションの合計とカレンダーに入ります。フリーの収支は、押さなくても入ります。</p>
+  ${more("「自分」を押すと、その人のセットの収支が、セッションの合計とカレンダーに入ります。フリーの収支は、押さなくても入ります。")}
   ${mergeHTML()}
   ${canAddPlayer(db)?`<div class="row"><input id="pName" placeholder="名前" style="flex:1"><button class="primary" id="pAdd">メンバーを追加</button></div>`:`<div class="row between"><span class="note">無料で登録できるメンバーは${FREE_PLAYERS}人までです。${FREE_PLAYERS+1}人目からは拡張機能です。今いる人と記録はそのまま使えます。1回だけの人は、セットを始めるときにゲストを選べます。</span><button class="small" id="pToSet">設定へ</button></div>`}</section>`;
 }
