@@ -1185,7 +1185,7 @@ function viewUnlock(){
   return `<section class="card"><h2>拡張機能</h2>
     ${unlocked()?`<p class="note"><b>試用中です。${new Date(until-1).toISOString().slice(0,10)} まで使えます。</b></p>`:db.settings.unlocked&&until?`<p class="warn">${db.settings.trial?"試用":"コード"}の期限が切れました。記録はそのまま残っていて、見ることも入れることもできます。</p>`:""}
     ${canTrial(db.settings)?`<div class="row"><button class="small primary" id="trialOk">${TRIAL_DAYS}日試す</button><span class="note">コードがなくても拡張機能を全部使えます。試せるのは1回だけです。</span></div>`:""}
-    <p class="note">メンバーを${FREE_PLAYERS+1}人以上登録でき、レートやメンバーを組み合わせた集計・バックアップ・別の端末の記録を足す・条件の保存・成績の1枚まとめ・半荘ごとのチップ・CSV/Excel の書き出しが使えるようになります。買い切りで月額はありません。販売ページは準備中です。</p>
+    <p class="note">メンバーを${FREE_PLAYERS+1}人以上登録でき、レートやメンバーを組み合わせた集計・バックアップ・別の端末の記録を足す・条件の保存・成績の1枚まとめ・半荘ごとのチップ・CSV/Excel の書き出しが使えるようになります。買い切りで月額はありません。解放コードは<a href="https://coconala.com/contents_market/pictures/cmw3bekl20009a60iagd5zebb" target="_blank" rel="noopener">ココナラの販売ページ</a>で買えます。</p>
     <div class="row"><input id="codeIn" placeholder="コードを貼り付け" autocapitalize="none" autocorrect="off" spellcheck="false" autocomplete="off" style="flex:1"><button class="primary" id="codeOk">有効にする</button></div>
     <span class="warn" id="codeMsg"></span></section>`;
 }
