@@ -105,6 +105,7 @@ table{border-collapse:collapse;width:100%;font-variant-numeric:tabular-nums;font
 th,td{padding:6px 6px;border-bottom:1px solid var(--line);text-align:right;white-space:nowrap}
 th:first-child,td:first-child{text-align:left}
 th{font-weight:normal;color:var(--mute);font-size:12px}
+th.wrap{white-space:normal;line-height:1.3} th.wrap span{display:inline-block;white-space:nowrap}
 .note{color:var(--mute);font-size:12px}
 .warn{color:var(--minus);font-size:13px}
 nav.tabs{position:fixed;left:0;right:0;bottom:0;z-index:6;background:var(--card);border-top:1px solid var(--line);
@@ -657,7 +658,7 @@ function viewSession(s){
     ${s.venue&&s.venue.amount?seg("vhow",[["equal","割り勘"],["win","勝ち額で"],["top","トップが払う"]],s.venue.how||"equal"):""}
     ${s.venue&&s.venue.amount?`<div><span class="note">店へまとめて払う人</span><div class="row">${[...s.members.map(id=>[id,esc(P(id).name)]),["each","各自"]].map(([v,l])=>`<button class="chip" data-vpay="${v}" aria-pressed="${(payer||"each")===v}">${l}</button>`).join("")}</div></div>`:""}
     ${s.venue&&s.venue.amount&&venueFlips(t)?`<p class="warn">${s.venue.how==="top"?"トップが払うと収支の順番が入れ替わります。「勝ち額で」なら、順番は変わりません。":"場代を引くと収支の順番が入れ替わります。分け方を確かめてください。"}</p>`:""}
-    <div class="tablebox"><table><thead><tr><th>名前</th><th>ポイント</th><th>チップ</th>${hasExtra?"<th>その他</th>":""}<th>場代・ゲーム代</th><th>収支</th></tr></thead><tbody>
+    <div class="tablebox"><table><thead><tr><th>名前</th><th>ポイント</th><th>チップ</th>${hasExtra?"<th>その他</th>":""}<th class="wrap"><span>場代・</span><span>ゲーム代</span></th><th>収支</th></tr></thead><tbody>
     ${s.members.map(id=>`<tr><td><span class="dot" style="background:${P(id).color}"></span>${esc(P(id).name)}</td><td class="${cls(t[id].point)}">${fmtPt(t[id].point)}</td><td>${t[id].chips}</td>${hasExtra?`<td class="${cls(t[id].extra)}">${t[id].extra.toLocaleString()}</td>`:""}<td>${t[id].fee}</td><td class="${cls(t[id].yen)}"><b>${fmtP(t[id].yen)}</b></td></tr>`).join("")}
     </tbody></table></div>
     ${s.games.length?`<h3>着順の回数</h3><div class="tablebox"><table id="sRanks"><thead><tr><th>名前</th>${Array.from({length:s.rule.mode},(_,k)=>`<th>${k+1}着</th>`).join("")}<th>半荘</th></tr></thead><tbody>${s.members.map(id=>`<tr><td>${esc(P(id).name)}</td>${rankDist(t[id].spans,s.rule.mode).map(x=>`<td>${round1(x)}</td>`).join("")}<td>${t[id].games}</td></tr>`).join("")}</tbody></table></div>`:""}
