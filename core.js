@@ -325,6 +325,7 @@ function sessionTotals(s){
   return t;
 }
 
+const APP_LINE="この精算は、無料のアプリ「半荘ノート」で出しました https://hanchan-note.github.io/";
 // LINE などへ貼る精算の文。name は id から名前を返す関数
 function settleText(s,name){
   const t=sessionTotals(s), [,m,d]=s.date.split("-").map(Number), p=v=>v.toLocaleString("ja-JP")+"P";
@@ -334,6 +335,8 @@ function settleText(s,name){
   if(payer) lines.push(`※場代${p(venueTotal(s,t))}は${name(payer)}がまとめて店へ払うので、各自の場代の分を足して渡します`);
   else if(s.members.some(id=>t[id].fee)) lines.push("※場代は収支から引いてあり、やり取りには入れていません");
   if(unit>1) lines.push(`※やり取りは${unit}P単位で、端数は${name(roundHolder(s,t))}が受けます`);
+  // 同じ卓の人がアドレスを開いても、記録は記録した人の端末にしかない。結果へのリンクと読まれないよう、アプリの紹介として書く
+  lines.push("",APP_LINE);
   return lines.join("\n");
 }
 
@@ -473,4 +476,4 @@ function backupDue(d){
   return gameCount(d)-Math.max(Number(d.settings.backupGames||0),Number(d.settings.nudgeSkip||0)) >= every;
 }
 
-if(typeof module!=="undefined") module.exports={codeNumber,STOPPED_CODES,settlePay,venuePayer,settleUnit,venueTotal,roundHolder,basicFilter,mergeBackup,syncGameChips,startGameChips,stopGameChips,settleText,rankDist,outOf,nextOut,TRIAL_DAYS,canTrial,startTrial,swapPlayer,mergePlayer,parseUma,umaHelp,hasSample,clearSample,parseSigned,parseScore,scoreText,freeResult,scoreGame,roundKeepTotal,extraGap,chipGap,sessionTotals,settle,filterSessions,playerStats,toCSV,RULE_PRESETS,verifyCode,isUnlocked,CODE_EPOCH,isBackup,gameCount,nextSnaps,unsavedGames,backupDue,ruleNote,tieGroups,venueShares,venueFlips,impossibleScore,scoreUnit,roundScore,playersByRecent,FREE_PLAYERS,canAddPlayer,GUESTS,ensureGuest,freeSummary,freeDays,filterFree,chipFor,quickTable,backupSummary,logEntries,logTotals,dayMap,monthGrid,shiftMonth};
+if(typeof module!=="undefined") module.exports={codeNumber,APP_LINE,STOPPED_CODES,settlePay,venuePayer,settleUnit,venueTotal,roundHolder,basicFilter,mergeBackup,syncGameChips,startGameChips,stopGameChips,settleText,rankDist,outOf,nextOut,TRIAL_DAYS,canTrial,startTrial,swapPlayer,mergePlayer,parseUma,umaHelp,hasSample,clearSample,parseSigned,parseScore,scoreText,freeResult,scoreGame,roundKeepTotal,extraGap,chipGap,sessionTotals,settle,filterSessions,playerStats,toCSV,RULE_PRESETS,verifyCode,isUnlocked,CODE_EPOCH,isBackup,gameCount,nextSnaps,unsavedGames,backupDue,ruleNote,tieGroups,venueShares,venueFlips,impossibleScore,scoreUnit,roundScore,playersByRecent,FREE_PLAYERS,canAddPlayer,GUESTS,ensureGuest,freeSummary,freeDays,filterFree,chipFor,quickTable,backupSummary,logEntries,logTotals,dayMap,monthGrid,shiftMonth};
