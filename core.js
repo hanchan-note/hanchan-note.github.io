@@ -23,6 +23,11 @@ function tieGroups(scores){
   const by={}; Object.entries(scores).forEach(([id,v])=>(by[v]=by[v]||[]).push(id));
   return Object.values(by).filter(x=>x.length>1);
 }
+// 整数 total を people の人数で分ける。割り切れない分は先頭の人から1ずつ足す
+function spread(total,people){
+  const n=people.length, base=Math.trunc(total/n), rem=total-base*n;
+  return people.map((_,k)=>base+(k<Math.abs(rem)?Math.sign(rem):0));
+}
 // tobiBy は人を飛ばした人。0点以下の人が1人ごとにトビ賞を払い、tobiBy が受ける。ダブルなら2人分
 // rule.tobiDouble は2人以上飛んだときの形。half は1人分を飛んだ人で分ける、low は1人分を一番低い人が払う
 function scoreGame(scores, rule, order, tobiBy){
@@ -50,13 +55,21 @@ function scoreGame(scores, rule, order, tobiBy){
     }
     i=j+1;
   }
-  // 丸めると合計が0からずれるので、1着が残りを受ける
-  if(!direct&&rule.round&&total===expected) res[sorted[0]].point=round1(-sorted.slice(1).reduce((a,id)=>a+res[id].point,0));
-  const tobi=Number(rule.tobi||0);
-  if(!direct&&tobi&&tobiBy&&res[tobiBy]){
+  // 丸めや同点の割り算で合計が0からずれるので、1着が残りを受ける。分け合う形で1着が同点なら、同点の人で分ける
+  if(!direct&&total===expected){
+    const diff=Math.round(-ids.reduce((a,id)=>a+res[id].point,0)*10);
+    if(diff){
+      const tie=rule.tie||"split", top=tie==="split"?sorted.filter(id=>scores[id]===scores[sorted[0]]):[sorted[0]];
+      spread(diff,top).forEach((d,k)=>{ res[top[k]].point=round1(res[top[k]].point+d/10); });
+    }
+  }
+  const tobi=Math.max(Number(rule.tobi||0),0);
+  if(!direct&&tobi&&tobiBy&&res[tobiBy]&&scores[tobiBy]>0){
     const flown=ids.filter(id=>id!==tobiBy&&scores[id]<=0), how=flown.length>1?rule.tobiDouble:"", low=Math.min(...flown.map(id=>scores[id]));
-    const payers=how==="low"?flown.filter(id=>scores[id]===low):flown, pay=round1(how?tobi/payers.length:tobi);
-    payers.forEach(id=>{ res[id].point=round1(res[id].point-pay); res[tobiBy].point=round1(res[tobiBy].point+pay); });
+    // how があるときは1人分を払う人で分ける。割り切れない0.1は点数の低い人から足す
+    const payers=(how==="low"?flown.filter(id=>scores[id]===low):flown).sort((a,b)=>scores[a]-scores[b]);
+    const pays=how?spread(Math.round(tobi*10),payers).map(d=>d/10):payers.map(()=>tobi);
+    payers.forEach((id,k)=>{ res[id].point=round1(res[id].point-pays[k]); res[tobiBy].point=round1(res[tobiBy].point+pays[k]); });
   }
   return {res, total, expected, ok: total===expected};
 }
@@ -200,8 +213,9 @@ function scoreText(sc,unit=1000){
 // フリーの1半荘：自分の点数と着順だけで出す。ゲーム代は負け分と同じく引く。feeTop はトップだけ違う店のため
 // r.tobi はトビ賞。0点以下で払い、tobiWin（人を飛ばした）でもらう
 function freeResult(score, rank, chips, r, tobiWin){
-  const oka=(r.ret-r.start)*r.mode/1000, tobi=Number(r.tobi||0);
-  const point=round1((roundScore(score,r.round)-r.ret)/1000 + (r.uma[rank-1]||0) + (rank===1?oka:0) - (score<=0?tobi:0) + (tobiWin?tobi:0));
+  const oka=(r.ret-r.start)*r.mode/1000, tobi=Math.max(Number(r.tobi||0),0);
+  // 0点以下の人は人を飛ばせないので、tobiWin は数えない
+  const point=round1((roundScore(score,r.round)-r.ret)/1000 + (r.uma[rank-1]||0) + (rank===1?oka:0) - (score<=0?tobi:0) + (tobiWin&&score>0?tobi:0));
   const fee=Number(rank===1 && r.feeTop!==undefined && r.feeTop!=="" ? r.feeTop : r.fee||0);
   const gain=point*r.rate + Number(chips||0)*r.chipRate;
   return {point, fee, total:Math.round(Math.round(gain*1e6)/1e6 - fee)};
@@ -303,8 +317,11 @@ function venueShares(nets,amount,how){
   const ids=Object.keys(nets), n=ids.length, a=Number(amount||0);
   if(!n||!a) return Object.fromEntries(ids.map(id=>[id,0]));
   const W=ids.reduce((x,id)=>x+Math.max(nets[id],0),0);
-  if(how==="top"){ const top=ids.reduce((b,id)=>nets[id]>nets[b]?id:b,ids[0]); return Object.fromEntries(ids.map(id=>[id,id===top?a:0])); }
-  if(how==="win"&&W>0) return roundKeepTotal(Object.fromEntries(ids.map(id=>{const w=Math.max(nets[id],0); return [id,a<=W?w*a/W:w+(a-W)/n];})));
+  // 一番の人が同点なら、その人たちで等分する
+  if(how==="top"){ const mx=Math.max(...ids.map(id=>nets[id])), tops=ids.filter(id=>nets[id]===mx), r=roundKeepTotal(Object.fromEntries(tops.map(id=>[id,a/tops.length]))); return Object.fromEntries(ids.map(id=>[id,r[id]||0])); }
+  // 勝ち額が0の人には、端数の1Pも付けない
+  if(how==="win"&&W>0&&a<=W){ const win=ids.filter(id=>nets[id]>0), r=roundKeepTotal(Object.fromEntries(win.map(id=>[id,nets[id]*a/W]))); return Object.fromEntries(ids.map(id=>[id,r[id]||0])); }
+  if(how==="win"&&W>0) return roundKeepTotal(Object.fromEntries(ids.map(id=>{const w=Math.max(nets[id],0); return [id,w+(a-W)/n];})));
   return roundKeepTotal(Object.fromEntries(ids.map(id=>[id,a/n])));
 }
 // 場代を引いたあとに、収支の順番が入れ替わるか
@@ -317,6 +334,8 @@ function sessionTotals(s){
   s.members.forEach(id=>t[id]={point:0, games:0, ranks:[], spans:[], chips:Number((s.chips||{})[id]||0), extra:extraOf(s,id), fee:Number(s.rule.fee||0), net:0, yen:0});
   (s.games||[]).forEach(g=>{
     const r = scoreGame(g.scores, s.rule, g.order||s.members, g.tobiBy);
+    // 点数の合計が合わない半荘（記録のあとに持ち点を変えたなど）は計算に入れない。画面は「合計ずれ」と出す
+    if(!r.ok) return;
     Object.entries(r.res).forEach(([id,v])=>{ if(!t[id])return; t[id].point=round1(t[id].point+v.point); t[id].games++; t[id].ranks.push(v.rank); t[id].spans.push({best:v.best,worst:v.worst,n:s.rule.mode}); });
   });
   const net = roundKeepTotal(Object.fromEntries(Object.entries(t).map(([id,v])=>[id, v.point*s.rule.rate + v.chips*s.rule.chipRate + v.extra])));
@@ -418,11 +437,12 @@ function playerStats(sessions, n){
     });
   });
   Object.values(st).forEach(p=>{
-    const g=p.spans.length||1;
+    // 1半荘も打っていない人（4人で回す三麻で抜けた人など）は割合を出さない
+    const g=p.spans.length;
     p.avgRank = p.ranks.length? p.ranks.reduce((a,b)=>a+b,0)/p.ranks.length : null;
-    p.top = p.spans.filter(r=>r.best===1).length/g;
-    p.rentai = p.spans.filter(r=>r.best<=2).length/g;
-    p.lastAvoid = 1 - p.spans.filter(r=>r.worst===r.n).length/g;
+    p.top = g ? p.spans.filter(r=>r.best===1).length/g : null;
+    p.rentai = g ? p.spans.filter(r=>r.best<=2).length/g : null;
+    p.lastAvoid = g ? 1 - p.spans.filter(r=>r.worst===r.n).length/g : null;
     p.dist = rankDist(p.spans,n);
   });
   return st;

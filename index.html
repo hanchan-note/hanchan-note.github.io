@@ -167,7 +167,7 @@ let db, idb=null, saveBroken=false;
 function sample(){
   const P=[["りょう","#4f6b55"],["しょう","#2f6fb0"],["なおき","#c0443b"],["ゆう","#b8892c"]].map(([name,color])=>({id:uid(),name,color,sample:true}));
   const [a,b,c,d]=P.map(p=>p.id);
-  const mk=(date,title,tags,preset,members,games,chips,rate)=>{const rule={...RULE_PRESETS[preset]}; if(rate)rule.rate=rate;
+  const mk=(date,title,tags,preset,members,games,chips,rate)=>{const rule={...RULE_PRESETS[preset],tie:"seat"}; if(rate)rule.rate=rate;
     return {id:uid(),date,title,tags,rule,members,games:games.map(g=>({scores:Object.fromEntries(members.map((m,i)=>[m,g[i]]))})),chips:Object.fromEntries(members.map((m,i)=>[m,chips[i]])),sample:true,sampleN:games.length};};
   const S=[
     mk("2026-10-04","見本の会",["家"],"m4",[a,b,c,d],[[42000,31000,17000,10000],[25000,38000,22000,15000],[39000,27000,21000,13000]],[0,0,0,0],50),
@@ -218,7 +218,7 @@ const fmtAt=t=>new Date(t+9*3600e3).toISOString().slice(0,16).replace("T"," ");
 const fmtP=v=>v===0?"±0P":(v>0?"+":"")+v.toLocaleString("ja-JP")+"P";
 const fmtPt=v=>(v>0?"+":"")+v.toFixed(1);
 const cls=v=>v>0?"plus":v<0?"minus":"";
-const pct=v=>(v*100).toFixed(0)+"%";
+const pct=v=>v===null||v===undefined?"-":(v*100).toFixed(0)+"%";
 const esc=s=>String(s??"").replace(/[&<>"]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
 const today=()=>new Date(Date.now()+9*3600e3).toISOString().slice(0,10);
 
@@ -405,11 +405,12 @@ function summaryCanvas(sel){
   return c;
 }
 function viewStats(){
+  // 拡張が切れた端末で保存した条件を押しても、絞りは無料の分だけにする。表とグラフで数字をそろえる
+  if(!unlocked()) filter=basicFilter(filter);
   const sel=statSel();
   const n = filter.mode? Number(filter.mode) : (sel.every(s=>s.rule.mode===3)&&sel.length?3:4);
   const st=playerStats(sel,n);
   const ids=Object.keys(st).sort((a,b)=>st[b].yen-st[a].yen);
-  if(!unlocked()) filter=basicFilter(filter);
   const lock=unlocked()?"":'<span class="lock">拡張</span>';
   const chipRow=(arr,key,label)=>arr.map(v=>`<button class="chip" data-f="${key}" data-v="${esc(v.v)}" aria-pressed="${v.on}">${esc(v.l)}</button>`).join("");
   const pickList = db.sessions.slice().sort((a,b)=>b.date.localeCompare(a.date)).map(s=>`<label class="row" style="gap:6px"><input type="checkbox" data-pick="${s.id}" ${filter.pick.includes(s.id)?"checked":""}> <span class="num">${s.date}</span> ${esc(s.title||(s.tags||[]).join(" "))} <span class="note">${modeName(s.rule.mode)}・${rateName(s.rule.rate)}</span></label>`).join("");
@@ -448,7 +449,7 @@ function viewStats(){
     <div class="stack" id="sumBox" hidden><img id="sumPrev" alt="成績をまとめた画像" style="width:100%;border:1px solid var(--line);border-radius:10px"><button class="small primary" id="sumSave">画像を保存・共有</button></div>
   </section>
   <section class="card"><h2>収支の動き</h2><div class="chartbox"><canvas id="c1" aria-label="収支の推移"></canvas></div></section>
-  ${statModes(sel).map(m=>{const ms=playerStats(sel.filter(s=>s.rule.mode===m),m), mi=Object.keys(ms).sort((a,b)=>ms[a].avgRank-ms[b].avgRank), mn=modeName(m);
+  ${statModes(sel).map(m=>{const ms=playerStats(sel.filter(s=>s.rule.mode===m),m), mi=Object.keys(ms).filter(id=>ms[id].games).sort((a,b)=>ms[a].avgRank-ms[b].avgRank), mn=modeName(m);
     return `<section class="card"><h2>着順（${mn}）</h2>
     <div class="tablebox"><table><thead><tr><th>名前</th><th>半荘</th><th>平均着順</th><th>トップ率</th><th>連対率</th><th>ラス回避</th></tr></thead>
     <tbody>${mi.map(id=>{const p=ms[id];return `<tr><td><span class="dot" style="background:${P(id).color}"></span>${esc(P(id).name)}</td><td>${p.games}</td><td>${p.avgRank?p.avgRank.toFixed(2):"-"}</td><td>${pct(p.top)}</td><td>${pct(p.rentai)}</td><td>${pct(p.lastAvoid)}</td></tr>`}).join("")}</tbody></table></div>
@@ -495,7 +496,7 @@ function bindStats(){
       data:dates.map(d=>{if(d in m)last=m[d];return last;})};})},
     options:{maintainAspectRatio:false,plugins:{legend:{position:"bottom",labels:{boxWidth:10}}},scales:{y:{ticks:{callback:v=>v.toLocaleString()+"P"}}}}}));
   const rc=[cssv("--r1"),cssv("--r2"),cssv("--r3"),cssv("--r4")];
-  statModes(sel).forEach(m=>{ const ms=playerStats(sel.filter(s=>s.rule.mode===m),m), mi=Object.keys(ms);
+  statModes(sel).forEach(m=>{ const ms=playerStats(sel.filter(s=>s.rule.mode===m),m), mi=Object.keys(ms).filter(id=>ms[id].games);
     charts.push(new Chart(document.getElementById("c2-"+m),{type:"bar",data:{labels:mi.map(id=>P(id).name),
       datasets:Array.from({length:m},(_,k)=>({label:(k+1)+"着",backgroundColor:rc[k],data:mi.map(id=>{const p=ms[id];const g=p.dist.reduce((a,b)=>a+b,0)||1;return Math.round(p.dist[k]/g*100);})}))},
       options:{maintainAspectRatio:false,plugins:{legend:{position:"bottom",labels:{boxWidth:10}}},scales:{x:{stacked:true},y:{stacked:true,max:100,ticks:{callback:v=>v+"%"}}}}}));
@@ -638,6 +639,7 @@ function viewSession(s){
     <div class="row between"><button class="small ghost" id="back">← 戻る</button></div>
     <div class="rulebox" id="sRuleNow"><b>今のルール</b><br>${s.rule.direct?`${modeName(s.rule.mode)}・ポイントで入力・${rateName(s.rule.rate)}`:`${ruleLine(s.rule)}<br><span class="note">${ruleNote(s.rule)}</span>`}${s.members.length>s.rule.mode?'<br><span class="note">4人で回す（半荘ごとに1人抜ける）</span>':""}</div>
     <h2><span class="num">${s.date}</span> ${esc(s.title||"")}</h2>
+    ${s.games.some(g=>!scoreGame(g.scores,s.rule,g.order||s.members,g.tobiBy).ok)?`<p class="warn">「合計ずれ」と出ている半荘は、${s.rule.direct?"全員のポイントを足しても0にならない":"全員の点数を足しても持ち点×人数にならない"}ため、収支と成績に入れていません。「直す」を押して点数を直してください。</p>`:""}
     <div class="tablebox"><table><thead><tr><th>半荘</th>${head}<th></th></tr></thead><tbody>${rows}${editGame===null?`<tr class="nextrow"><td>${s.games.length+1}</td>${s.members.map(()=>"<td>-</td>").join("")}<td></td></tr>`:""}${s.games.length?`<tr class="totalrow"><td>合計</td>${s.members.map(id=>`<td><span class="num ${cls(t[id].point)}">${fmtPt(t[id].point)}</span></td>`).join("")}<td></td></tr>`:""}</tbody></table></div>
     <div class="stack"><h3 id="gHead">${editGame===null?`${s.games.length+1}半荘目の${s.rule.direct?"ポイント":"点数"}を入れる`:`${editGame+1}半荘目を直す`}（合計 ${s.rule.direct?"0":(s.rule.start*s.rule.mode).toLocaleString()+"点"}）</h3>
       ${s.games.length?"":seg("input",[["score","終局の点数で入れる"],["point","ポイントで入れる"]],s.rule.direct?"point":"score")}
@@ -758,7 +760,7 @@ function bindSession(){
       s.games.push({scores,...(order?{order}:{}),...(tobiBy?{tobiBy}:{}),...(s.chipByGame?{chips}:{})}); syncGameChips(s); db.sample=false; delete resume.sc[s.id]; save(); if(unlocked()) takeSnap(true); render(); warnBrowser();
     };
     const box=document.getElementById("tieBox"), order=[];
-    const groups=s.rule.direct||s.rule.tie==="split"?[]:tieGroups(scores);
+    const groups=(s.rule.tie||"split")==="split"?[]:tieGroups(scores);
     // 飛ばした人が押されていないときは、トビ賞の入れ忘れを防ぐためここで聞く
     const nextStep=()=>{ if(!groups.length) return finish(); ask(groups[0],groups.slice(1)); };
     // 起家は半荘ごとに変わるので、同点の上下はその場で聞く
@@ -795,7 +797,7 @@ function bindSession(){
     const v=id=>document.getElementById(id).value, u=parseUma(v("sUma"),s.rule.mode), nums=["sRate","sChipR","sFee","sStart","sRet"].map(id=>parseSigned(v(id)));
     if(!u){document.getElementById("sErr").textContent=umaHelp(s.rule.mode);return;}
     if(nums.includes(null)||!v("sDate")){document.getElementById("sErr").textContent="日付と数字を入れてください";return;}
-    if(nums[3]!==s.rule.start&&s.games.length&&!s.rule.direct&&!confirm(`持ち点を変えると、記録した${s.games.length}半荘の点数の合計が合わなくなり、計算が止まります。点数を入れ間違えたときは、半荘ごとに「直す」で直してください。\n\nこのまま持ち点を変えますか？`)) return;
+    if(nums[3]!==s.rule.start&&s.games.length&&!s.rule.direct&&!confirm(`持ち点を変えると、記録した${s.games.length}半荘は、点数の合計が持ち点×人数と合わなくなります。その${s.games.length}半荘は収支と成績に入らなくなります。点数を入れ間違えていたときは、持ち点は変えずに、半荘ごとに「直す」で点数を直してください。\n\nこのまま持ち点を変えますか？`)) return;
     undoable("この回を直しました",()=>{ s.date=v("sDate"); s.title=v("sTitle").trim(); s.tags=v("sTags").split(/\s+/).filter(Boolean);
       [s.rule.rate,s.rule.chipRate,s.rule.fee,s.rule.start,s.rule.ret]=nums; s.rule.uma=u; s.rule.round=v("sRound"); if(s.rule.tobi) s.rule.tobiDouble=v("sDouble"); });
   };
@@ -846,6 +848,7 @@ function setRuleField(i,r,key){
   else if(k==="round"||k==="tobiDouble") r[k]=i.value;
   else if(k==="feeTop"&&i.value.trim()==="") r.feeTop="";
   else{ const n=parseSigned(i.value); if(n===null) return "数字を入れてください";
+    if(k==="tobi"&&n<0) return "トビ賞には0以上の数を入れてください";
     if(k==="rate"&&r.chipRate===chipFor(r.mode,r.rate)){ r.chipRate=chipFor(r.mode,n); document.querySelector(`[data-${key}="chipRate"]`).value=r.chipRate; }
     r[k]=n; }
   return "";
@@ -919,6 +922,7 @@ function bindFree(){
   document.getElementById("fAdd").onclick=()=>{
     const sc=parseScore(score.value,scoreUnit(freeState().rule));
     if(sc===null){document.getElementById("fErr").textContent="点数を入れてください";return;}
+    if(freeTobi&&sc<=0){document.getElementById("fErr").textContent="自分の点数が0点以下のときは、「飛ばした」は押せません";return;}
     if(impossibleScore(sc,freeRank,r)&&!confirm(`${badMsg(sc)}\n\nこのまま記録しますか？`)) return;
     const g={id:uid(),date:today(),score:sc,rank:freeRank,chips:parseSigned(chip.value)||0,tobiWin:freeTobi,rule:ruleCopy(r)};
     f.games.push(g); db.sample=false; freeTobi=false; resume.free={rank:freeRank}; save(); if(unlocked()) takeSnap(true); warnBrowser();
@@ -1002,6 +1006,7 @@ function bindFreeDay(){
   document.getElementById("eOk").onclick=()=>{
     const err=document.getElementById("eErr"), sc=parseScore(scoreEl.value,scoreUnit(rule)), date=document.getElementById("eDate").value;
     if(sc===null||!date){err.textContent="点数と日付を入れてください";return;}
+    if(tobi&&rule.tobi&&sc<=0){err.textContent="自分の点数が0点以下のときは、「飛ばした」は押せません";return;}
     if(impossibleScore(sc,rank,rule)&&!confirm(`${rank}着で${sc.toLocaleString()}点は起こらない組み合わせです。点数か着順を確かめてください\n\nこのまま直しますか？`)) return;
     freeEdit=null; openSession="free:"+date;
     undoable("半荘を直しました",()=>{ Object.assign(g,{score:sc,rank,chips:parseSigned(document.getElementById("eChip").value)||0,tobiWin:tobi&&!!rule.tobi,date,rule}); });
